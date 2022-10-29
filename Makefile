@@ -33,7 +33,7 @@ debug: CXXFLAGS += -DDEBUG -g
 debug: all
 
 exe: all
-	./$(BIN_DIR)/$(TARGET)
+	./run.sh
 
 clean:
 	-@rm -rvf $(OBJ_DIR)/*
