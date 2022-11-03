@@ -1,8 +1,27 @@
-#include <iostream>
+#include <mpi.h>
+#include <string>
 
-int main ()
+int main (int argc, char *argv[])
 {
-  std::cout << "Arthur le bouff" << std::endl;
-  return 0;
-}
+    int rank, size;
 
+    MPI_Init(&argc, &argv);
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    if (argc < 3 && rank == 0) 
+        std::cout << "Use run.sh script." << std::endl;
+
+    int nb_servers = std::stoi(argv[1]);
+    int nb_clients = std::stoi(argv[2]);
+
+    if (rank < nb_servers)
+        std::cout << rank << ": I'm a server" << std::endl;
+    else
+        std::cout << rank << ": I'm a client" << std::endl;
+
+    MPI_Finalize();
+    
+    return 0;
+}

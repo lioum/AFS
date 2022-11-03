@@ -1,5 +1,5 @@
 CXX      := -mpic++
-CXXFLAGS := -pedantic-errors -Wall -Wextra -Werror -O3
+CXXFLAGS := -std=c++20 -pedantic-errors -Wall -Wextra -O3
 LDFLAGS  := 
 OBJ_DIR  := ./build
 BIN_DIR  := ./bin
