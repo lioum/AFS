@@ -1,23 +1,42 @@
 #include "repl.hh"
 
+#include <cstdlib>
 #include <exception>
 #include <memory>
+#include <mpi.h>
+#include <optional>
 
 #include "repl_message.hh"
 
 namespace repl
 {
+    
+    REPL::REPL(MPI_Comm com)
+    : Server(com)
+    {
+    }
 
     void REPL::run()
     {
-        while (true)
+        while(true)
         {
             std::cout << "REPL(" << state.get_rank() << "): " << std::endl;
             std::cout << "REPL$ ";
             std::string input;
             std::cin >> input;
             auto bite = process_message(input);
-            serialize_and_send(bite);
+            if (bite.has_value())
+            {
+                auto serialization = bite->serialize();
+                int err = MPI_Send(serialization.data(), serialization.length(), MPI_CHAR, bite->target_rank, 0, state.get_comm());
+                char* error_string = (char*)malloc((sizeof(char)) * MPI_MAX_ERROR_STRING);
+                int len;
+                MPI_Error_string(err, error_string, &len);
+                std::cout << error_string << std::endl;
+            }
+            else {
+                std::cout << "MOGUS" << std::endl;
+            }
         }
     }
 

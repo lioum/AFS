@@ -24,5 +24,7 @@ namespace repl
 
         static std::shared_ptr<REPL_message>
         deserialize(const std::string &message);
+    private:
+        virtual json serialize_json() const;
     };
 }

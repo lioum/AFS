@@ -47,5 +47,10 @@ public:
         return uid;
     }
 
+    inline MPI_Comm get_comm()
+    {
+        return comm;
+    }
+
     void update();
 };

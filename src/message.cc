@@ -1,6 +1,6 @@
 #include "message.hh"
 #include <memory>
-
+#include <iostream>
 #include "repl_message.hh"
 
 namespace message
@@ -15,12 +15,15 @@ namespace message
         switch (type)
         {
         case MessageType::REPL:
-            json["REPL"] = this->serialize();
+            json["REPL"] = this->serialize_json();
             break;
         case MessageType::RPC:
-            json["RPC"] = this->serialize();
+            json["RPC"] = this->serialize_json();
             break;
+        default:
+            throw std::runtime_error("Unknown message type");
         }
+        
         json["MESSAGE_TYPE"] = this->type;
         return json.dump();
     }

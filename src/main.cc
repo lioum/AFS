@@ -1,5 +1,6 @@
 #include <mpi.h>
 #include <string>
+#include "repl.hh"
 
 int main (int argc, char *argv[])
 {
@@ -16,7 +17,13 @@ int main (int argc, char *argv[])
     int nb_servers = std::stoi(argv[1]);
     int nb_clients = std::stoi(argv[2]);
 
-    if (rank < nb_servers)
+    if (rank == 0)
+    {
+        std::cout << rank << ": I'm the REPL" << std::endl;
+        repl::REPL repl(MPI_COMM_WORLD);
+        repl.run();
+    }
+    else if (rank < nb_servers)
         std::cout << rank << ": I'm a server" << std::endl;
     else
         std::cout << rank << ": I'm a client" << std::endl;

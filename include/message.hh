@@ -28,7 +28,7 @@ namespace message
         static std::shared_ptr<Message> deserialize(const std::string &message);
 
     private:
-        virtual const std::string serialize_json() = 0;
+        virtual json serialize_json() const = 0;
 
         const MessageType type;
     };

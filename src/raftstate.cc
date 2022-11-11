@@ -9,6 +9,7 @@ RaftState::RaftState(MPI_Comm comm)
     , leader_uid(-1)
     , last_checked(std::chrono::system_clock::now())
     , timeout(RaftState::INITIAL_TIMEOUT)
+    , comm(comm)
 
 {
     MPI_Comm_rank(comm, &uid);
