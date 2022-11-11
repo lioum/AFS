@@ -1,5 +1,8 @@
+#pragma once
+
 #include <chrono>
 #include <cstddef>
+#include <optional>
 
 #include <mpi.h>
 #include "message.hh"
@@ -37,6 +40,11 @@ public:
     inline bool is_leader()
     {
         return leader_uid == uid;
+    }
+    
+    inline int get_rank()
+    {
+        return uid;
     }
 
     void update();
