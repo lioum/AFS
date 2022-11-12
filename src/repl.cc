@@ -40,6 +40,11 @@ namespace repl
         }
     }
 
+    void REPL::on_message_callback(std::shared_ptr<message::Message> message)
+    {
+        std::cout << "REPL: Received message" << std::endl;
+    }
+
     std::optional<REPL_message> REPL::process_message(std::string input)
     {
         std::string res;

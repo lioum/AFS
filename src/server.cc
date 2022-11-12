@@ -1,7 +1,41 @@
 #include "server.hh"
 #include <mpi.h>
 #include "raftstate.hh"
+#include "repl.hh"
 
 Server::Server(MPI_Comm com)
 : state(RaftState(com))
 {}
+
+std::shared_ptr<message::Message> Server::listen()
+{
+    int flag;
+    MPI_Status status;
+    MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, state.get_comm(), &flag, &status);
+
+    int source = status.MPI_SOURCE;
+    auto tag = status.MPI_TAG;
+
+    if (!flag)
+        return nullptr;
+
+    int count = 0;
+    MPI_Get_count(&status, MPI_CHAR, &count);
+
+    auto buffer = std::vector<char>(count);
+    MPI_Recv(buffer.data(), count, MPI_CHAR, source, tag, state.get_comm(), &status);
+
+    return std::make_shared<repl::REPL_message>(source, "hello");
+}
+
+void Server::run()
+{
+    while (true)
+    {
+        std::shared_ptr<message::Message> message = listen();
+        if (message.get() != nullptr)
+        {
+            on_message_callback(message);
+        }
+    }
+}

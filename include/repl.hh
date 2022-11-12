@@ -14,6 +14,8 @@ namespace repl
 
         void run();
 
+        void on_message_callback(std::shared_ptr<message::Message> message) override;
+
     private:
         std::optional<REPL_message> process_message(std::string input);
         int rank;

@@ -1,6 +1,7 @@
 #include <mpi.h>
 #include <string>
 #include "repl.hh"
+#include "raft_server.hh"
 
 int main (int argc, char *argv[])
 {
@@ -24,7 +25,11 @@ int main (int argc, char *argv[])
         repl.run();
     }
     else if (rank < nb_servers)
+    {
         std::cout << rank << ": I'm a server" << std::endl;
+        raft::RaftServer server(MPI_COMM_WORLD);
+        server.run();
+    }
     else
         std::cout << rank << ": I'm a client" << std::endl;
 

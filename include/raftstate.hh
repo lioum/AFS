@@ -47,6 +47,11 @@ public:
         return uid;
     }
 
+    inline Role get_status()
+    {
+        return role;
+    }
+
     inline MPI_Comm get_comm()
     {
         return comm;
