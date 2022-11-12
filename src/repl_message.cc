@@ -5,9 +5,12 @@ namespace repl
 {
 
     REPL_message::REPL_message(ReplType type, int target_rank)
-        : Message(MessageType::REPL), repl_type(type), target_rank(target_rank)
+        : Message(MessageType::REPL), repl_type(type), target_rank(target_rank), speed("")
     {}
     
+    REPL_message::REPL_message(int target_rank, std::string speed)
+        : Message(MessageType::REPL), repl_type(ReplType::SPEED), target_rank(target_rank), speed(speed)
+    {}
 
     
     json REPL_message::serialize_json() const
@@ -23,8 +26,8 @@ namespace repl
        auto json = json::parse(message); 
        auto data = json["REPL"];
 
-       auto type = data["REPL_TYPE"];
-       auto sus = data["TARGET"];
+       ReplType type = data["REPL_TYPE"];
+       int sus = data["TARGET"];
        auto bite = std::make_shared<REPL_message>(type, sus);
 
        return bite;
