@@ -7,7 +7,7 @@ namespace repl
 {
 
     REPL_message::REPL_message(ReplType type, int target_rank, int sender_rank)
-        : Message(MessageType::REPL, sender_rank, target_rank), repl_type(type), speed(ReplSpeed::NONE)
+        : Message(MessageType::REPL, sender_rank, target_rank), repl_type(type), speed(ReplSpeed::FAST)
     {}
     
     REPL_message::REPL_message(int target_rank, int sender_rank, ReplSpeed speed)
@@ -35,8 +35,10 @@ namespace repl
        json j = json::parse(message); 
        json data = j["REPL"];
        ReplType type = static_cast<ReplType>(data["REPL_TYPE"]);
-       auto bite = std::make_shared<REPL_message>(type, j["TARGET"], j["SENDER"]);
-
-       return bite;
+       if (type == ReplType::SPEED)
+       {
+        return std::make_shared<REPL_message>(j["TARGET"], j["SENDER"], static_cast<ReplSpeed>(data["SPEED"]));
+       }
+       return std::make_shared<REPL_message>(type, j["TARGET"], j["SENDER"]);
     }
 }

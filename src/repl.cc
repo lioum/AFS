@@ -72,17 +72,16 @@ namespace repl
         return nullptr;
       }
         std::string speed_str;
-        std::cout << "REPL: What speed (low, medium, high) ? ";
-        std::cin >> speed_str;
-        if (speed_str != "low" && speed_str != "medium" && speed_str != "high") {
+        std::cout << "REPL: What speed (fast, medium, low) ? ";
+        if (speed_str != "low" && speed_str != "medium" && speed_str != "fast") {
           std::cout << "REPL: Invalid speed" << std::endl;
           return nullptr;
         }
-        ReplSpeed speed = ReplSpeed::LOW;
+        ReplSpeed speed = ReplSpeed::FAST;
         if (speed_str == "medium") {
           speed = ReplSpeed::MEDIUM;
-        } else if (speed_str == "high") {
-          speed = ReplSpeed::FAST;
+        } else if (speed_str == "low") {
+          speed = ReplSpeed::LOW;
         }
         return std::make_shared<REPL_message>(target_rank, state.get_rank(), speed);
       } else if (input == "START") {
