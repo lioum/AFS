@@ -6,7 +6,6 @@ class Server {
     
 public:
     Server(MPI_Comm com);
-    RaftState state;
 
     std::shared_ptr<message::Message> listen();
 
@@ -15,8 +14,8 @@ public:
     void work();
 
     void run();
-    
-private:
-    int rank;
-    int size;
+
+protected:
+RaftState state;
+
 };

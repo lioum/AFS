@@ -18,7 +18,5 @@ namespace repl
 
     private:
         std::optional<REPL_message> process_message(std::string input);
-        int rank;
-        int size;
     };
 }

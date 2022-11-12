@@ -12,9 +12,9 @@ using json = nlohmann::json;
 
 namespace message
 {
-    enum class MessageType
+    enum MessageType
     {
-        REPL,
+        REPL = 0,
         RPC,
     };
 
@@ -26,10 +26,9 @@ namespace message
 
         std::string serialize() const;
         static std::shared_ptr<Message> deserialize(const std::string &message);
-
-    private:
         virtual json serialize_json() const = 0;
 
+    private:
         const MessageType type;
     };
 }

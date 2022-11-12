@@ -8,5 +8,8 @@ class RaftServer : public Server {
     public:
       RaftServer(MPI_Comm com);
       void on_message_callback(std::shared_ptr<message::Message> message) override;
+    private:
+        bool crashed;
   };
+
 } // namespace raft

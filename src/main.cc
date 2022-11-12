@@ -20,19 +20,20 @@ int main (int argc, char *argv[])
 
     if (rank == 0)
     {
-        std::cout << rank << ": I'm the REPL" << std::endl;
+        //std::cout << rank << ": I'm the REPL" << std::endl;
         repl::REPL repl(MPI_COMM_WORLD);
         repl.run();
     }
     else if (rank < nb_servers)
     {
-        std::cout << rank << ": I'm a server" << std::endl;
+        //std::cout << rank << ": I'm a server" << std::endl;
         raft::RaftServer server(MPI_COMM_WORLD);
         server.run();
     }
     else
-        std::cout << rank << ": I'm a client" << std::endl;
-
+    {
+        //std::cout << rank << ": I'm a client" << std::endl;
+    }
     MPI_Finalize();
     
     return 0;

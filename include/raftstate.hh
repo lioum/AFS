@@ -31,8 +31,10 @@ private:
     chrono_time last_checked;
     microseconds timeout;
     int nb_states;
-    int uid;
     MPI_Comm comm;
+
+protected:
+    int uid;
 
 public:
     RaftState(MPI_Comm comm);

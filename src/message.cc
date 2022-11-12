@@ -11,32 +11,31 @@ namespace message
 
     std::string Message::serialize() const
     {
-        json json;
+        json j;
         switch (type)
         {
         case MessageType::REPL:
-            json["REPL"] = this->serialize_json();
+            j = this->serialize_json();
             break;
         case MessageType::RPC:
-            json["RPC"] = this->serialize_json();
+            j = this->serialize_json();
             break;
         default:
             throw std::runtime_error("Unknown message type");
         }
         
-        json["MESSAGE_TYPE"] = this->type;
-        return json.dump();
+        return j.dump();
     }
 
     std::shared_ptr<Message> Message::deserialize(const std::string &message)
     {
-        auto json = json::parse(message);
-        auto type = json["MESSAGE_TYPE"];
-        if (type == "REPL")
+        json j = json::parse(message);
+        MessageType type = static_cast<MessageType>(j["MESSAGE_TYPE"]);
+        if (type == MessageType::REPL)
         {
-            return repl::REPL_message::deserialize(message);
+          return repl::REPL_message::deserialize(message);
         }
-        else if (type == "RPC")
+        else if (type == MessageType::RPC) // RPC
         {
             // return rpc::RPC_message::deserialize(message);
             throw std::runtime_error("not implemented");

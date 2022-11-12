@@ -7,9 +7,9 @@ using namespace message;
 
 namespace repl
 {
-    enum class ReplType
+    enum ReplType
     {
-        CRASH,
+        CRASH = 0,
         SPEED,
         START,
     };
@@ -24,10 +24,10 @@ namespace repl
 
         static std::shared_ptr<REPL_message>
         deserialize(const std::string &message);
+        virtual json serialize_json() const;
     private:
         ReplType repl_type;
         int target_rank;
         std::string speed;
-        virtual json serialize_json() const;
     };
 }
