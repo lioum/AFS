@@ -2,11 +2,14 @@
 #include <memory>
 #include <iostream>
 #include "repl_message.hh"
+#include "handshake_message.hh"
 
 namespace message
 {
-    Message::Message(MessageType type)
+    Message::Message(MessageType type, int sender_rank, int target_rank)
         : type(type)
+        , sender_rank(sender_rank)
+        , target_rank(target_rank)
     {}
 
     std::string Message::serialize() const
@@ -18,6 +21,9 @@ namespace message
             j = this->serialize_json();
             break;
         case MessageType::RPC:
+            j = this->serialize_json();
+            break;
+        case MessageType::HANDSHAKE:
             j = this->serialize_json();
             break;
         default:
@@ -39,6 +45,10 @@ namespace message
         {
             // return rpc::RPC_message::deserialize(message);
             throw std::runtime_error("not implemented");
+        }
+        else if (type == MessageType::HANDSHAKE)
+        {
+            return Handshake_message::deserialize(message);
         }
         else
         {

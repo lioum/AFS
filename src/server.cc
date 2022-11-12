@@ -36,6 +36,22 @@ std::shared_ptr<message::Message> Server::listen()
     return message;
 }
 
+void Server::send(int target_rank, std::shared_ptr<message::Message> message)
+{
+    auto serialization = message->serialize();
+    int err =
+        MPI_Send(serialization.data(), serialization.length(), MPI_CHAR,
+                 target_rank, 0, state.get_comm());
+    if (err != 0)
+    {
+      char *error_string =
+          (char *)malloc((sizeof(char)) * MPI_MAX_ERROR_STRING);
+      int len;
+      MPI_Error_string(err, error_string, &len);
+      std::cout << "Send: " << error_string << std::endl;
+    }
+}
+
 void Server::run()
 {
     while (true)
@@ -45,5 +61,6 @@ void Server::run()
         {
           on_message_callback(message);
         }
+        work();
     }
 }

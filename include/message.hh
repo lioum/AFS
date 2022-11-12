@@ -16,20 +16,24 @@ namespace message
     {
         REPL = 0,
         RPC,
+        HANDSHAKE,
     };
 
     class Message
     {
     public:
-        explicit Message(MessageType type);
+        explicit Message(MessageType type, int sender_rank, int target_rank);
         virtual ~Message() = default;
+        int get_target_rank() const { return target_rank; }
 
         std::string serialize() const;
         static std::shared_ptr<Message> deserialize(const std::string &message);
         virtual json serialize_json() const = 0;
 
-    private:
+    protected:
         const MessageType type;
+        const int sender_rank;
+        const int target_rank;
     };
 }
 

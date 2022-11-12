@@ -10,13 +10,13 @@ namespace repl
     {
     public:
         REPL(MPI_Comm com);
-        //~REPL();
 
-        void run();
+        void work();
 
         void on_message_callback(std::shared_ptr<message::Message> message) override;
 
     private:
-        std::optional<REPL_message> process_message(std::string input);
+        std::shared_ptr<REPL_message> process_message(std::string input);
+        bool running;
     };
 }
