@@ -17,6 +17,7 @@ int main (int argc, char *argv[])
 
     int nb_servers = std::stoi(argv[1]);
     int nb_clients = std::stoi(argv[2]);
+    nb_clients = nb_clients;
 
     if (rank == 0)
     {

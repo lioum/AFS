@@ -6,10 +6,14 @@
 #include <chrono>
 
 namespace raft {
-RaftServer::RaftServer(MPI_Comm com) : Server(com), crashed(false), speed(repl::ReplSpeed::FAST) {}
+RaftServer::RaftServer(MPI_Comm com) : Server(com), crashed(false), started(false),  speed(repl::ReplSpeed::FAST) {}
 
 void RaftServer::work()
 {
+  if (!started)
+  {
+    return;
+  }
 std::this_thread::sleep_for(std::chrono::milliseconds(speed * 1000));
 
 }
@@ -37,6 +41,12 @@ void RaftServer::on_message_callback(
       repl::ReplSpeed newspeed = static_cast<repl::ReplSpeed>(j["REPL"]["SPEED"]);
       std::cout << "RaftServer(" << state.get_rank() << ") is changing speed from " << speed << " to " << j["REPL"]["SPEED"] << std::endl;
       speed = newspeed;
+      send(j["SENDER"], std::make_shared<message::Handshake_message>( message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank()));
+    }
+    else if (repl_message["REPL_TYPE"] == repl::ReplType::START)
+    {
+      std::cout << "RaftServer(" << state.get_rank() << ") is starting" << std::endl;
+      started = true;
       send(j["SENDER"], std::make_shared<message::Handshake_message>( message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank()));
     }
   }

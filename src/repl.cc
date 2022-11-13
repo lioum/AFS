@@ -57,7 +57,7 @@ namespace repl
         std::cin >> res;
       try {
         target_rank = std::stoi(res);
-      } catch (std::exception e) {
+      } catch (std::invalid_argument &e) {
         std::cout << "REPL: Invalid rank" << std::endl;
         return nullptr;
       }
@@ -67,7 +67,7 @@ namespace repl
         std::cin >> res;
       try {
         target_rank = std::stoi(res);
-      } catch (std::exception e) {
+      } catch (std::invalid_argument &e) {
         std::cout << "REPL: Invalid rank" << std::endl;
         return nullptr;
       }
@@ -89,7 +89,7 @@ namespace repl
         std::cin >> res;
       try {
         target_rank = std::stoi(res);
-      } catch (std::exception e) {
+      } catch (std::invalid_argument &e) {
         std::cout << "REPL: Invalid rank" << std::endl;
         return nullptr;
       }

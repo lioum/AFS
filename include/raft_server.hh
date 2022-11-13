@@ -14,6 +14,7 @@ class RaftServer : public Server {
       void work();
     private:
         bool crashed;
+        bool started;
         repl::ReplSpeed speed;
   };
 
