@@ -11,10 +11,19 @@ RaftServer::RaftServer(MPI_Comm com, int nb_servers) : Server(com, nb_servers), 
 
 void RaftServer::work()
 {
-  if (!started)
+  if (!started || crashed)
   {
     return;
   }
+  
+
+  // Do the work
+
+  // we will need to use a queue, 
+  // we will pop the element from the queue and do the work
+  // when a message is received in on_receive_client, we will push it to the queue
+
+
   std::this_thread::sleep_for(std::chrono::milliseconds(speed * speed * 1000));
 }
 
