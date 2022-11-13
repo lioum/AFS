@@ -14,7 +14,7 @@ void RaftServer::work()
   {
     return;
   }
-std::this_thread::sleep_for(std::chrono::milliseconds(speed * 1000));
+std::this_thread::sleep_for(std::chrono::milliseconds(speed * speed * 1000));
 
 }
 
@@ -56,6 +56,11 @@ void RaftServer::on_message_callback(
       std::cout << "RaftServer(" << state.get_rank()
                 << "): Received RPC message" << std::endl;
     }
+  }
+  
+  if (j["MESSAGE_TYPE"] == message::MessageType::CLIENT)
+  {
+    std::cout << "RaftServer(" << state.get_rank() << "): Received CLIENT message" << std::endl;
   }
 }
 } // namespace raft

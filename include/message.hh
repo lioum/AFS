@@ -17,6 +17,7 @@ namespace message
         REPL = 0,
         RPC,
         HANDSHAKE,
+        CLIENT,
     };
 
     class Message
