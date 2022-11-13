@@ -5,7 +5,7 @@
 class Server {
     
 public:
-    Server(MPI_Comm com);
+    Server(MPI_Comm com, int nb_servers);
 
     std::shared_ptr<message::Message> listen();
 

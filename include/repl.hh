@@ -9,7 +9,7 @@ namespace repl
     class REPL : public Server
     {
     public:
-        REPL(MPI_Comm com);
+        REPL(MPI_Comm com, int nb_servers);
 
         void work();
 

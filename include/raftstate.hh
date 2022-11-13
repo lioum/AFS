@@ -32,12 +32,14 @@ private:
     microseconds timeout;
     int nb_states;
     MPI_Comm comm;
+    
+    int nb_servers;
 
 protected:
     int uid;
 
 public:
-    RaftState(MPI_Comm comm);
+    RaftState(MPI_Comm comm, int nb_servers);
 
     inline bool is_leader()
     {
@@ -57,6 +59,11 @@ public:
     inline MPI_Comm get_comm()
     {
         return comm;
+    }
+
+    inline int get_nb_servers()
+    {
+        return nb_servers;
     }
 
     void update();

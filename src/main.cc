@@ -22,13 +22,13 @@ int main (int argc, char *argv[])
     if (rank == 0)
     {
         //std::cout << rank << ": I'm the REPL" << std::endl;
-        repl::REPL repl(MPI_COMM_WORLD);
+        repl::REPL repl(MPI_COMM_WORLD, nb_servers);
         repl.run();
     }
-    else if (rank < nb_servers)
+    else if (rank < nb_servers + 1)
     {
         //std::cout << rank << ": I'm a server" << std::endl;
-        raft::RaftServer server(MPI_COMM_WORLD);
+        raft::RaftServer server(MPI_COMM_WORLD, nb_servers);
         server.run();
     }
     else

@@ -12,8 +12,8 @@
 namespace repl
 {
     
-    REPL::REPL(MPI_Comm com)
-    : Server(com)
+    REPL::REPL(MPI_Comm com, int nb_servers)
+    : Server(com, nb_servers)
     , running(true)
     {
     }

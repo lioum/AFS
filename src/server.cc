@@ -3,9 +3,11 @@
 #include "raftstate.hh"
 #include "repl.hh"
 
-Server::Server(MPI_Comm com)
-: state(RaftState(com))
-{}
+Server::Server(MPI_Comm com, int nb_servers)
+    : state(com, nb_servers)
+{
+}
+
 
 std::shared_ptr<message::Message> Server::listen()
 {

@@ -3,13 +3,14 @@
 #include <ctime>
 #include <mpi.h>
 
-RaftState::RaftState(MPI_Comm comm)
+RaftState::RaftState(MPI_Comm comm, int nb_servers)
     : role(Role::FOLLOWER)
     , clock(0)
     , leader_uid(-1)
     , last_checked(std::chrono::system_clock::now())
     , timeout(RaftState::INITIAL_TIMEOUT)
     , comm(comm)
+    , nb_servers(nb_servers)
 
 {
     MPI_Comm_rank(comm, &uid);
