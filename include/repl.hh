@@ -11,7 +11,7 @@ namespace repl
     public:
         REPL(MPI_Comm com, int nb_servers);
 
-        void work();
+        void work() override;
 
         void on_message_callback(std::shared_ptr<message::Message> message) override;
 

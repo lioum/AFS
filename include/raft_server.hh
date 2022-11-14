@@ -1,5 +1,7 @@
 #pragma once
 
+#include <queue>
+
 #include "server.hh"
 #include "repl_message.hh"
 
@@ -11,17 +13,20 @@ class RaftServer : public Server {
       
       void on_message_callback(std::shared_ptr<message::Message> message) override;
       
-      void work();
+      void work() override;
     private:
         bool crashed;
         bool started;
         repl::ReplSpeed speed;
+        std::map<int, std::string> uids;
         
-        void on_receive_repl(json j);
+        std::queue<std::shared_ptr<message::Message>> message_queue;
+        
+        void on_receive_repl(std::shared_ptr<message::Message> message);
 
-        void on_receive_rpc(json j);
+        void on_receive_rpc(std::shared_ptr<message::Message> message);
 
-        void on_receive_client(json j);
+        void process_message_client(std::shared_ptr<message::Message> message);
         
         void broadcast_to_servers(std::shared_ptr<message::Message> message);
   };

@@ -10,6 +10,11 @@ namespace message
         , status(status)
     {}
 
+    Handshake_message::Handshake_message(HandshakeStatus status, int target_rank, int sender_rank, json custom_data)
+        : Message(MessageType::REPL, sender_rank, target_rank)
+        , status(status)
+        , custom_data(custom_data)
+    {}
     
     json Handshake_message::serialize_json() const
     {
@@ -19,6 +24,7 @@ namespace message
         j["TARGET"] = this->target_rank;
         json data;
         data["STATUS"] = this->status;
+        data["CUSTOM_DATA"] = this->custom_data;
         j["HANDSHAKE"] = data;
 
 

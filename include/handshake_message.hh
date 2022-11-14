@@ -15,6 +15,7 @@ namespace message
     {
     public:
         Handshake_message(HandshakeStatus status, int target_rank, int sender_rank);
+        Handshake_message(HandshakeStatus status, int target_rank, int sender_rank, json custom_data);
 
 
         static std::shared_ptr<Handshake_message>
@@ -22,5 +23,6 @@ namespace message
         virtual json serialize_json() const;
     private:
         HandshakeStatus status;
+        json custom_data;
     };
 }

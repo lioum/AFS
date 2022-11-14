@@ -22,14 +22,21 @@ void RaftServer::work()
   // we will need to use a queue, 
   // we will pop the element from the queue and do the work
   // when a message is received in on_receive_client, we will push it to the queue
+  if (!message_queue.empty())
+  {
+    std::shared_ptr<message::Message> message = message_queue.front();
+    message_queue.pop();
+    // do the work
+  }
 
 
   std::this_thread::sleep_for(std::chrono::milliseconds(speed * speed * 1000));
 }
 
-void RaftServer::on_receive_repl(json j) {
+void RaftServer::on_receive_repl(std::shared_ptr<message::Message> message) {
   std::cout << "RaftServer(" << state.get_rank() << "): Received REPL message"
             << std::endl;
+  json j = message->serialize_json();
   
   json repl_message = j["REPL"];
 
@@ -64,17 +71,20 @@ void RaftServer::on_receive_repl(json j) {
   }
 }
 
-void RaftServer::on_receive_rpc(json j) {
+void RaftServer::on_receive_rpc(std::shared_ptr<message::Message> message) {
+  json j = message->serialize_json();
   j = j;
 }
 
-void RaftServer::on_receive_client(json j) {
+void RaftServer::process_message_client(std::shared_ptr<message::Message> message) {
+  json j = message->serialize_json();
   json client_message = j["CLIENT"];
   if (client_message["ACTION"] == message::ClientAction::LOAD) {
     std::cout << "RaftServer(" << state.get_rank()
               << ") is cloading file " << client_message["FILENAME"] << std::endl;
     
     //LOAD FILE
+
     send(j["SENDER"],
          std::make_shared<message::Handshake_message>(
              message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank()));
@@ -86,10 +96,17 @@ void RaftServer::on_receive_client(json j) {
               << ") is going to list all files" << std::endl;
 
     //LIST FILES
-    
+    std::vector<int> list_uids;
+    for (const auto& [key, value] : uids) {
+      list_uids.push_back(key);
+    }
+
+    json custom_data;
+    custom_data["UIDS"] = list_uids;
+
     send(j["SENDER"],
          std::make_shared<message::Handshake_message>(
-             message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank()));
+             message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank(), custom_data));
   } else if (client_message["ACTION"] == message::ClientAction::APPEND) {
     std::cout << "RaftServer(" << state.get_rank() << ") is adding " << client_message["SOME_TEXT"] << " to file with uid " << client_message["UID"] << std::endl;
     
@@ -105,6 +122,8 @@ void RaftServer::on_receive_client(json j) {
     std::cout << "RaftServer(" << state.get_rank() << ") is deleting file with uid " << client_message["UID"] << std::endl;
     
     //delete file
+    std::remove(client_message["UID"].get<std::string>().c_str());
+    uids.erase(client_message["UID"]);
 
     send(j["SENDER"],
          std::make_shared<message::Handshake_message>(
@@ -125,19 +144,19 @@ void RaftServer::on_message_callback(
   }
 
   if (j["MESSAGE_TYPE"] == message::MessageType::REPL) {
-    on_receive_repl(j);
+    on_receive_repl(message);
   }
 
   if (j["MESSAGE_TYPE"] == message::MessageType::RPC) {
     std::cout << "RaftServer(" << state.get_rank() << "): Received RPC message"
               << std::endl;
-              on_receive_rpc(j);
+              on_receive_rpc(message);
   }
 
   if (j["MESSAGE_TYPE"] == message::MessageType::CLIENT) {
     std::cout << "RaftServer(" << state.get_rank()
               << "): Received CLIENT message" << std::endl;
-              on_receive_client(j);
+              message_queue.push(message);
   }
 }
 void RaftServer::broadcast_to_servers(std::shared_ptr<message::Message> message)
