@@ -5,12 +5,13 @@
 namespace message
 {
 
-    Client_message::Client_message(ClientAction action, int target_rank, int sender_rank)
+    Client_message::Client_message(ClientAction action, int target_rank, int sender_rank, std::string filename, std::string content)
         : Message(MessageType::CLIENT, sender_rank, target_rank)
         , action(action)
+        , filename(filename)
+        , content(content)
     {}
 
-    
     json Client_message::serialize_json() const
     {
         json j;
@@ -29,6 +30,8 @@ namespace message
     {
        json j = json::parse(message); 
        ClientAction action = static_cast<ClientAction>(j["CLIENT"]["ACTION"]);
-       return std::make_shared<Client_message>(action, j["TARGET"], j["SENDER"]);
+       std::string filename = j["CLIENT"]["FILENAME"];
+        std::string content = j["CLIENT"]["CONTENT"];
+       return std::make_shared<Client_message>(action, j["TARGET"], j["SENDER"], filename, content);
     }
 }

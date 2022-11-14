@@ -12,11 +12,11 @@ namespace message
         APPEND,
         DELETE,
     };
-    
+
     class Client_message : public Message
     {
     public:
-        Client_message(ClientAction action, int target_rank, int sender_rank);
+        Client_message(ClientAction action, int target_rank, int sender_rank, std::string filename, std::string content);
 
 
         static std::shared_ptr<Client_message>
@@ -24,5 +24,7 @@ namespace message
         virtual json serialize_json() const;
     private:
         ClientAction action;
+        std::string filename;
+        std::string content;
     };
 }

@@ -61,6 +61,7 @@ void Server::run()
         std::shared_ptr<message::Message> message = listen();
         if (message.get() != nullptr)
         {
+          std::cout << "Start running client server in server.cc" << std::endl;
           on_message_callback(message);
         }
         work();

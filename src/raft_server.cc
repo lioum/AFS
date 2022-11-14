@@ -90,7 +90,7 @@ void RaftServer::process_message_client(std::shared_ptr<message::Message> messag
     std::string content = client_message["SOME_TEXT"];
 
     MPI_File file;
-    MPI_File_open(state.get_comm(), filename.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &file);
+    MPI_File_open(MPI_COMM_SELF, filename.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &file);
 
     MPI_File_write(file, content.c_str(), content.size(), MPI_CHAR, MPI_STATUS_IGNORE);
 
@@ -137,7 +137,7 @@ void RaftServer::process_message_client(std::shared_ptr<message::Message> messag
     std::string content = client_message["SOME_TEXT"];
 
     MPI_File file;
-    MPI_File_open(state.get_comm(), uids[uid].c_str(), MPI_MODE_APPEND, MPI_INFO_NULL, &file);
+    MPI_File_open(MPI_COMM_SELF, uids[uid].c_str(), MPI_MODE_APPEND, MPI_INFO_NULL, &file);
 
     MPI_File_write(file, content.c_str(), content.size(), MPI_CHAR, MPI_STATUS_IGNORE);
 

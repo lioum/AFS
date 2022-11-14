@@ -2,6 +2,7 @@
 #include <string>
 #include "repl.hh"
 #include "raft_server.hh"
+#include "client_server.hh"
 
 int main (int argc, char *argv[])
 {
@@ -17,7 +18,6 @@ int main (int argc, char *argv[])
 
     int nb_servers = std::stoi(argv[1]);
     int nb_clients = std::stoi(argv[2]);
-    nb_clients = nb_clients;
 
     if (rank == 0)
     {
@@ -34,6 +34,10 @@ int main (int argc, char *argv[])
     else
     {
         //std::cout << rank << ": I'm a client" << std::endl;
+        client::ClientServer client(MPI_COMM_WORLD, nb_clients);
+          
+        std::cout << "Start running client server in main.cc" << std::endl;
+        client.run();
     }
     MPI_Finalize();
     
