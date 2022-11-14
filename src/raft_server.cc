@@ -122,7 +122,7 @@ void RaftServer::process_message_client(std::shared_ptr<message::Message> messag
     std::cout << "RaftServer(" << state.get_rank() << ") is deleting file with uid " << client_message["UID"] << std::endl;
     
     //delete file
-    std::remove(client_message["UID"].get<std::string>().c_str());
+    std::remove(uids[client_message["UID"]].c_str());
     uids.erase(client_message["UID"]);
 
     send(j["SENDER"],
