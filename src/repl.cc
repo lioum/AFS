@@ -73,6 +73,7 @@ namespace repl
       }
         std::string speed_str;
         std::cout << "REPL: What speed (fast, medium, low) ? ";
+        std::cin >> speed_str;
         if (speed_str != "low" && speed_str != "medium" && speed_str != "fast") {
           std::cout << "REPL: Invalid speed" << std::endl;
           return nullptr;
