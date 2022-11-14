@@ -14,5 +14,8 @@ public:
     void run();
     
     virtual void work() = 0;
+    
+    MPI_Comm com;
 
+    virtual void receive(Message &msg) {return;}
 };

@@ -15,8 +15,7 @@ namespace repl
     REPL::REPL(MPI_Comm com, int nb_servers)
     : Server(com, nb_servers)
     , running(true)
-    {
-    }
+    {}
 
     void REPL::work() {
       std::string input;
@@ -98,4 +97,50 @@ namespace repl
       }
         return nullptr;
     }
+}
+
+class Visitor
+{
+  virtual void visit(Message msg);
+  virtual void visit(REPL_Message msg);
+}
+
+class Receive_Visitor
+{
+  virtual void visit(Message msg);
+
+  virtual void visit(REPL_Message msg)
+  {
+    msg->attr2;
+  }
+}
+
+class Message
+{
+  int attr1;
+
+  virtual Message deserialize();
+  virtual void accept(Visitor v);
+}
+
+class REPL_Message : Message
+{
+  int attr2;
+
+  virtual Message deserialize(string str) static
+  {
+      msg = Message::deserialize(str);
+      msg = dynamic_cast<REPL_Message>(msg);
+      msg.attr2 = // deserialize code
+      return make_shared<Message>(msg);
+  }
+
+  virtual void accept(Visitor v)
+  {
+    v->visit(*this)
+  }
+}
+int main() {
+  string str = mpi_received();
+  auto repl_msg = REPL_Message::deserialize(str);
 }

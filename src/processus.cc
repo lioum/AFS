@@ -1,19 +1,18 @@
-#include "server.hh"
+#include "processus.hh"
 #include <mpi.h>
 #include "raftstate.hh"
 #include "repl.hh"
 
-Server::Server(MPI_Comm com, int nb_servers)
-    : state(com, nb_servers)
-{
-}
+Processus::Processus(MPI_Comm com)
+    : com(com)
+{}
 
 
-std::shared_ptr<message::Message> Server::listen()
+std::shared_ptr<message::Message> Processus::listen()
 {
     int flag;
     MPI_Status status;
-    MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, state.get_comm(), &flag, &status);
+    MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status);
     int source = status.MPI_SOURCE;
     auto tag = status.MPI_TAG;
 
@@ -38,7 +37,7 @@ std::shared_ptr<message::Message> Server::listen()
     return message;
 }
 
-void Server::send(int target_rank, std::shared_ptr<message::Message> message)
+void Processus::send(int target_rank, std::shared_ptr<message::Message> message)
 {
     auto serialization = message->serialize();
     int err =
@@ -54,7 +53,7 @@ void Server::send(int target_rank, std::shared_ptr<message::Message> message)
     }
 }
 
-void Server::run()
+void Processus::run()
 {
     while (true)
     {

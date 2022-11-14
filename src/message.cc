@@ -12,25 +12,16 @@ namespace message
         , target_rank(target_rank)
     {}
 
-    std::string Message::serialize() const
+    std::string Message::serialize_json() const
     {
         json j;
-        switch (type)
-        {
-        case MessageType::REPL:
-            j = this->serialize_json();
-            break;
-        case MessageType::RPC:
-            j = this->serialize_json();
-            break;
-        case MessageType::HANDSHAKE:
-            j = this->serialize_json();
-            break;
-        default:
-            throw std::runtime_error("Unknown message type");
-        }
+
+        j["MESSAGE_TYPE"] = this->type;
+
+        j["SENDER"] = this->sender_rank;
+        j["TARGET"] = this->target_rank;
         
-        return j.dump();
+        return j;
     }
 
     std::shared_ptr<Message> Message::deserialize(const std::string &message)
@@ -43,8 +34,7 @@ namespace message
         }
         else if (type == MessageType::RPC) // RPC
         {
-            // return rpc::RPC_message::deserialize(message);
-            throw std::runtime_error("not implemented");
+            return raft::RPC::deserialize(message);
         }
         else if (type == MessageType::HANDSHAKE)
         {

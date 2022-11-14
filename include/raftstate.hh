@@ -18,53 +18,19 @@ using chrono_time = std::chrono::time_point<std::chrono::system_clock>;
 using std::chrono::microseconds;
 using namespace std::chrono_literals;
 
-class RaftState
+struct RaftState
 {
+    // Raft timeout is between 150 and 300 ms in the reference paper
+    const microseconds INITIAL_TIMEOUT = 150ms;
 
-    const microseconds INITIAL_TIMEOUT = 10000us;
+    explicit RaftState(int nb_servers, int uid);
 
-private:
-    Role role;
-    size_t clock;
-    int leader_uid;
+    Role role = Role::FOLLOWER;
+    size_t term = 0;
+    int leader_uid = -1;
 
     chrono_time last_checked;
-    microseconds timeout;
-    int nb_states;
-    MPI_Comm comm;
-    
+    microseconds timeout = INITIAL_TIMEOUT;
     int nb_servers;
-
-protected:
     int uid;
-
-public:
-    RaftState(MPI_Comm comm, int nb_servers);
-
-    inline bool is_leader()
-    {
-        return leader_uid == uid;
-    }
-    
-    inline int get_rank()
-    {
-        return uid;
-    }
-
-    inline Role get_status()
-    {
-        return role;
-    }
-
-    inline MPI_Comm get_comm()
-    {
-        return comm;
-    }
-
-    inline int get_nb_servers()
-    {
-        return nb_servers;
-    }
-
-    void update();
 };
