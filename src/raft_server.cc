@@ -26,6 +26,7 @@ void RaftServer::work()
   {
     std::shared_ptr<message::Message> message = message_queue.front();
     message_queue.pop();
+    process_message_client(message);
     // do the work
   }
 
@@ -85,6 +86,16 @@ void RaftServer::process_message_client(std::shared_ptr<message::Message> messag
     
     //LOAD FILE
 
+    std::string filename = client_message["FILENAME"];
+    std::string content = client_message["SOME_TEXT"];
+
+    MPI_File file;
+    MPI_File_open(state.get_comm(), filename.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &file);
+
+    MPI_File_write(file, content.c_str(), content.size(), MPI_CHAR, MPI_STATUS_IGNORE);
+
+    MPI_File_close(&file);
+
     send(j["SENDER"],
          std::make_shared<message::Handshake_message>(
              message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank()));
@@ -111,7 +122,16 @@ void RaftServer::process_message_client(std::shared_ptr<message::Message> messag
     std::cout << "RaftServer(" << state.get_rank() << ") is adding " << client_message["SOME_TEXT"] << " to file with uid " << client_message["UID"] << std::endl;
     
     //APPEND TO FILE
+    int uid = client_message["UID"];
+    std::string content = client_message["SOME_TEXT"];
 
+    MPI_File file;
+    MPI_File_open(state.get_comm(), uids[uid].c_str(), MPI_MODE_APPEND, MPI_INFO_NULL, &file);
+
+    MPI_File_write(file, content.c_str(), content.size(), MPI_CHAR, MPI_STATUS_IGNORE);
+
+    MPI_File_close(&file);
+    
     send(j["SENDER"],
          std::make_shared<message::Handshake_message>(
              message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank()));
@@ -122,7 +142,7 @@ void RaftServer::process_message_client(std::shared_ptr<message::Message> messag
     std::cout << "RaftServer(" << state.get_rank() << ") is deleting file with uid " << client_message["UID"] << std::endl;
     
     //delete file
-    std::remove(uids[client_message["UID"]].c_str());
+    MPI_File_delete(uids[client_message["UID"]].c_str(), MPI_INFO_NULL);
     uids.erase(client_message["UID"]);
 
     send(j["SENDER"],
