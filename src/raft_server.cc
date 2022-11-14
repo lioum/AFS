@@ -96,9 +96,20 @@ void RaftServer::process_message_client(std::shared_ptr<message::Message> messag
 
     MPI_File_close(&file);
 
+    int uid = 0;
+    while(uids.find(uid) != uids.end())
+    {
+      uid++;
+    }
+    uids[uid] = filename;
+
+    
+    json custom_data;
+    custom_data["UID"] = uid;
+
     send(j["SENDER"],
          std::make_shared<message::Handshake_message>(
-             message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank()));
+             message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank(), custom_data));
 
    //BROADCAST TO SERVERS new file 
 
@@ -131,7 +142,7 @@ void RaftServer::process_message_client(std::shared_ptr<message::Message> messag
     MPI_File_write(file, content.c_str(), content.size(), MPI_CHAR, MPI_STATUS_IGNORE);
 
     MPI_File_close(&file);
-    
+
     send(j["SENDER"],
          std::make_shared<message::Handshake_message>(
              message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank()));
