@@ -19,7 +19,7 @@ std::shared_ptr<message::Message> Server::listen()
 
     if (!flag)
         return nullptr;
-    
+
     int count = 0;
     MPI_Get_count(&status, MPI_CHAR, &count);
 
