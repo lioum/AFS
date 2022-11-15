@@ -25,13 +25,7 @@ namespace raft
     public:
         RaftServer(MPI_Comm com, int nb_servers);
 
-        void
-        on_message_callback(std::shared_ptr<message::Message> message) override;
-
         void work() override;
-
-    private:
-        std::map<int, std::string> uids;
         
         void receive(RpcRequestVote &msg) override;
         void receive(RpcAppendEntries &msg) override;
@@ -44,15 +38,13 @@ namespace raft
         void receive(ClientAppend &msg) override;
         void receive(ClientDelete &msg) override;
 
-        /*void on_receive_repl(std::shared_ptr<message::Message> message);
+        void execute(ClientLoad &msg) override;
+        void execute(ClientList &msg) override;
+        void execute(ClientAppend &msg) override;
+        void execute(ClientDelete &msg) override;
 
-        void on_receive_rpc(std::shared_ptr<message::Message> message);
-
-        void process_message_client(std::shared_ptr<message::Message> message);
-
-        void broadcast_to_servers(std::shared_ptr<message::Message> message);*/
-
-        std::shared_ptr<RPC> request_vote_rpc();
+    private:
+        std::map<int, std::string> uids;   
 
     protected:
         Role role;

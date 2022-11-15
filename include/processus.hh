@@ -14,25 +14,26 @@ public:
     std::shared_ptr<message::Message> listen();
 
     void send(int target_rank, std::shared_ptr<message::Message> message);
+    void handshake_success(int target_rank);
+    void handshake_success(int target_rank, json data);
 
-    virtual void on_message_callback(std::shared_ptr<message::Message> message) = 0;
-
-    void run();
-    
+    void run(); 
     virtual void work() = 0;
     
-    MPI_Comm com;
-
     virtual void receive(Message &msg) {return;}
     void receive(ReplCrash &msg) override;
     void receive(ReplSpeed &msg) override;
     void receive(ReplStart &msg) override;
 
-private:
-        bool crashed;
-        bool started;
-        repl::ReplSpeed speed;
-        std::string private_folder_location;
+    virtual void execute(QueueMessage &msg) {return;}
 
-        std::deque<std::function<void()>> action_queue;
+    MPI_Comm com;
+
+private:
+    bool crashed;
+    bool started;
+    repl::ReplSpeed speed;
+    std::string private_folder_location;
+
+    std::deque<QueueMessage> action_queue;
 };

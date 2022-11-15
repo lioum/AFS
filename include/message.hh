@@ -55,25 +55,23 @@ namespace message
             , sender_rank(sender_rank){};
         virtual ~Message() = default;
 
-        int get_target_rank() const
-        {
-            return target_rank;
-        }
-        int get_sender_rank() const
-        {
-            return sender_rank;
-        }
-        MessageType get_type() const
-        {
-            return type;
-        }
-
-        virtual void accept(std::shared_ptr<Processus> process) = 0;
+        virtual void accept(Processus &process) = 0;
 
         const MessageType type;
         const int sender_rank;
         const int target_rank;
     };
+
+    class QueueMessage : public Message
+    {
+    public:
+        QueueMessage(MessageType type)
+            : Message(type) {};
+        QueueMessage(MessageType type, int target_rank, int sender_rank)
+            : Message(type, target_rank, sender_rank) {};
+         
+        virtual void call_execute(Processus &process) = 0;
+    }
 
     class ReplCrash : public Message
     {
@@ -85,9 +83,9 @@ namespace message
             : Message(MessageType::REPL_CRASH, target_rank, sender_rank)
         {}
 
-        void accept(std::shared_ptr<Processus> process) override
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
         }
     };
 
@@ -102,9 +100,10 @@ namespace message
         ReplStart(int target_rank, int sender_rank)
             : Message(MessageType::REPL_START, target_rank, sender_rank)
         {}
-        void accept(std::shared_ptr<Processus> process) override
+
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
         }
     };
 
@@ -120,9 +119,10 @@ namespace message
             : Message(MessageType::REPL_SPEED, target_rank, sender_rank)
             , speed(speed)
         {}
-        void accept(std::shared_ptr<Processus> process) override
+
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
         }
 
         int speed = -1;
@@ -144,9 +144,9 @@ namespace message
             , last_log_term(last_log_term)
         {}
 
-        void accept(std::shared_ptr<Processus> process) override
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
         };
 
         int term;
@@ -173,9 +173,9 @@ namespace message
             , entries(entries)
             , leader_commit(leader_commit)
         {}
-        void accept(std::shared_ptr<Processus> process) override
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
         }
 
         int term;
@@ -200,9 +200,9 @@ namespace message
             , term(term)
             , vote_granted(vote_granted)
         {}
-        void accept(std::shared_ptr<Processus> process) override
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
         }
 
         int term;
@@ -225,9 +225,9 @@ namespace message
             , success(success)
             , last_log_index(last_log_index)
         {}
-        void accept(std::shared_ptr<Processus> process) override
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
         }
         int term;
         bool success;
@@ -247,9 +247,9 @@ namespace message
         HandshakeFailure(int target_rank, int sender_rank, const json &data)
             : Message(MessageType::HANDSHAKE_FAILURE, target_rank, sender_rank)
             , data(data){};
-        void accept(std::shared_ptr<Processus> process) override
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
         }
 
         json data;
@@ -266,9 +266,10 @@ namespace message
         HandshakeFailure(int target_rank, int sender_rank, const json &data)
             : Message(MessageType::HANDSHAKE_SUCCESS, target_rank, sender_rank)
             , data(data){};
-        void accept(std::shared_ptr<Processus> process) override
+
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
         }
 
         json data;
@@ -277,7 +278,7 @@ namespace message
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HandshakeSuccess, type, sender_rank,
                                        target_rank, data)
 
-    class ClientLoad : public Message
+    class ClientLoad : public QueueMessage
     {
     public:
         ClientLoad()
@@ -285,9 +286,15 @@ namespace message
         ClientLoad(int target_rank, int sender_rank, const json &data)
             : Message(MessageType::CLIENT_LOAD, target_rank, sender_rank)
             , data(data){};
-        void accept(std::shared_ptr<Processus> process) override
+            
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
+        }
+
+        void call_execute(Processus &process) override
+        {
+            process.call_execute(*this);
         }
 
         std::string filename;
@@ -297,21 +304,27 @@ namespace message
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientLoad, type, sender_rank,
                                        target_rank, filename, content)
 
-    class ClientList : public Message
+    class ClientList : public QueueMessage
     {
     public:
         ClientList()
             : Message(MessageType::CLIENT_LIST){};
-        void accept(std::shared_ptr<Processus> process) override
+
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
+        }
+        
+        void call_execute(Processus &process) override
+        {
+            process.call_execute(*this);
         }
     };
 
     NLOHMAN_DEFINE_TYPE_NON_INTRUSIVE(ClientList, type, sender_rank,
                                       target_rank)
 
-    class ClientAppend : public Message
+    class ClientAppend : public QueueMessage
     {
     public:
         ClientAppend()
@@ -321,11 +334,17 @@ namespace message
             : Message(MessageType::CLIENT_APPEND, target_rank, sender_rank)
             , content(content)
             , uid(uid){};
-        void accept(std::shared_ptr<Processus> process) override
+
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
         }
 
+        void call_execute(Processus &process) override
+        {
+            process.call_execute(*this);
+        }
+        
     private:
         std::string content;
         int uid;
@@ -334,7 +353,7 @@ namespace message
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientAppend, type, sender_rank,
                                        target_rank, content, uid)
 
-    class ClientDelete : public Message
+    class ClientDelete : public QueueMessage
     {
     public:
         ClientDelete()
@@ -345,9 +364,14 @@ namespace message
                       int sender_rank)
             , uid(uid){};
 
-        void accept(std::shared_ptr<Processus> process) override
+        void accept(Processus &process) override
         {
-            process->receive(this);
+            process.receive(*this);
+        }
+        
+        void call_execute(Processus &process) override
+        {
+            process.call_execute(*this);
         }
 
     private:

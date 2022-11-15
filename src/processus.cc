@@ -56,6 +56,20 @@ void Processus::send(int target_rank, std::shared_ptr<message::Message> message)
     }
 }
 
+void Processus::handshake_success(int target_rank)
+{
+    auto response = std::make_shared<message::HandshakeSuccess>(target_rank,
+     state.get_rank());
+    send(target_rank, response);
+}
+
+void Processus::handshake_success(int target_rank, json data)
+{
+    auto response = std::make_shared<message::HandshakeSuccess>(target_rank,
+     state.get_rank(), data);
+    send(target_rank, response);
+}
+
 void Processus::run()
 {
     while (true)
@@ -63,7 +77,7 @@ void Processus::run()
         std::shared_ptr<message::Message> message = listen();
         if (message.get() != nullptr)
         {
-          on_message_callback(message);
+            message->accept(this);
         }
         work();
     }
@@ -75,8 +89,7 @@ void Processus::receive(ReplCrash &msg)
               << ") is crashing. Bravo Six, going dark" << std::endl;
 
     crashed = true;
-    auto response = std::make_shared<message::HandshakeSuccess>(msg.sender_rank, state.get_rank());
-    send(msg.sender_rank, response);
+    handshake_success(msg.sender_rank);
 }
 
 void Processus::receive(ReplSpeed &msg)
@@ -86,15 +99,14 @@ void Processus::receive(ReplSpeed &msg)
               << msg.speed << std::endl;
 
     speed = msg.speed;
-    auto response = std::make_shared<message::HandshakeSuccess>(msg.sender_rank, state.get_rank());
-    send(msg.sender_rank, response);
+    handshake_success(msg.sender_rank);
 }
 
 void Processus::receive(ReplStart &msg)
 {
-    std::cout << "Processus(" << state.get_rank() << ") is starting" << std::endl;
+    std::cout << "Processus(" << state.get_rank() 
+              << ") is starting" << std::endl;
 
     started = true;
-    auto response = std::make_shared<message::HandshakeSuccess>(msg.sender_rank, state.get_rank());
-    send(msg.sender_rank, response);
+    handshake_success(msg.sender_rank);
 }
