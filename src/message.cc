@@ -1,5 +1,6 @@
 #include "message.hh"
 
+
 void ReplCrash::accept(Processus &process)
 {
     process.receive(*this);
@@ -83,4 +84,41 @@ void ClientDelete::accept(Processus &process)
 void ClientDelete::call_execute(Processus &process) 
 {
     process.call_execute(*this);
+}
+
+
+std::unique_ptr<Message> deserialize_message(const json &j)
+{
+    auto msg_type = j["type"].get<MessageType>();
+
+    switch (msg_type)
+    {
+    case MessageType::REPL_CRASH:
+        return std::make_unique<ReplCrash>(j.get<ReplCrash>());
+    case MessageType::REPL_SPEED:
+        return std::make_unique<ReplSpeed>(j.get<ReplSpeed>());
+    case MessageType::REPL_START:
+        return std::make_unique<ReplStart>(j.get<ReplStart>());
+    case MessageType::RPC_REQUEST_VOTE:
+        return std::make_unique<RpcRequestVote>(j.get<RpcRequestVote>());
+    case MessageType::RPC_APPEND_ENTRIES:
+        return std::make_unique<RpcAppendEntries>(j.get<RpcAppendEntries>());
+    case MessageType::RPC_VOTE_RESPONSE:
+        return std::make_unique<RpcVoteResponse>(j.get<RpcVoteResponse>());
+    case MessageType::RPC_APPEND_ENTRIES_RESPONSE:
+        return std::make_unique<RpcAppendEntriesResponse>(
+            j.get<RpcAppendEntriesResponse>());
+    case MessageType::HANDSHAKE_FAILURE:
+        return std::make_unique<HandshakeFailure>(j.get<HandshakeFailure>());
+    case MessageType::HANDSHAKE_SUCCESS:
+        return std::make_unique<HandshakeSuccess>(j.get<HandshakeSuccess>());
+    case MessageType::CLIENT_LOAD:
+        return std::make_unique<ClientLoad>(j.get<ClientLoad>());
+    case MessageType::CLIENT_LIST:
+        return std::make_unique<ClientList>(j.get<ClientList>());
+    case MessageType::CLIENT_APPEND:
+        return std::make_unique<ClientAppend>(j.get<ClientAppend>());
+    case MessageType::CLIENT_DELETE:
+        return std::make_unique<ClientDelete>(j.get<ClientDelete>());
+    }
 }

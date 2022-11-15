@@ -1,6 +1,11 @@
 #pragma once
 
+#include <memory>
+
 #include "nlohmann/json.hpp"
+#include "processus.hh"
+
+class LogEntry;
 
 using json = nlohmann::json;
 
@@ -80,6 +85,7 @@ public:
     void accept(Processus &process) override;
 };
 
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplCrash, type, sender_rank, target_rank)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplCrash, type, sender_rank,
                                    target_rank)
 
@@ -93,8 +99,7 @@ public:
     void accept(Processus &process) override;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplStart, type, sender_rank,
-                                   target_rank)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplStart, type, sender_rank, target_rank)
 
 class ReplSpeed : public Message
 {
@@ -109,8 +114,8 @@ public:
     int speed = -1;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplSpeed, type, sender_rank,
-                                   target_rank, speed)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplSpeed, type, sender_rank, target_rank,
+                                   speed)
 
 class RpcRequestVote : public Message
 {
@@ -200,9 +205,8 @@ public:
     int last_log_index;
 };
 
-NLHOMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcAppendEntriesResponse, type,
-                                   sender_rank, target_rank, term, success,
-                                   last_log_index)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcAppendEntriesResponse, type, sender_rank,
+                                   target_rank, term, success, last_log_index)
 
 class HandshakeFailure : public Message
 {
@@ -251,8 +255,8 @@ public:
     std::string content;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientLoad, type, sender_rank,
-                                   target_rank, filename, content)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientLoad, type, sender_rank, target_rank,
+                                   filename, content)
 
 class ClientList : public QueueMessage
 {
@@ -265,8 +269,7 @@ public:
     void call_execute(Processus &process) override;
 };
 
-NLOHMAN_DEFINE_TYPE_NON_INTRUSIVE(ClientList, type, sender_rank,
-                                  target_rank)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientList, type, sender_rank, target_rank)
 
 class ClientAppend : public QueueMessage
 {
@@ -286,8 +289,8 @@ private:
     int uid;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientAppend, type, sender_rank,
-                                   target_rank, content, uid)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientAppend, type, sender_rank, target_rank,
+                                   content, uid)
 
 class ClientDelete : public QueueMessage
 {
@@ -300,9 +303,12 @@ public:
     void accept(Processus &process) override;
     void call_execute(Processus &process) override;
 
-private:
     int uid;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientDelete, type, sender_rank,
-                                   target_rank, uid)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientDelete, type, sender_rank, target_rank,
+                                   uid)
+
+
+std::unique_ptr<Message>
+deserialize_message(const json &msg);

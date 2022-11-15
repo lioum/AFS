@@ -1,29 +1,35 @@
 #pragma once
 
-#include "client_message.hh"
-
 #include <chrono>
 #include <cstddef>
+#include <deque>
+#include <mpi.h>
 #include <optional>
 
-class Processus {
-    
+class Message;
+
+class Processus
+{
 public:
     Processus(MPI_Comm com);
 
-    std::shared_ptr<message::Message> listen();
+    std::shared_ptr<Message> listen();
 
-    void send(int target_rank, std::shared_ptr<message::Message> message);
+    void send(int target_rank, std::shared_ptr<Message> message);
+
     void handshake_success(int target_rank);
     void handshake_success(int target_rank, json data);
 
     void run(); 
     virtual void work() = 0;
-    
-    virtual void receive(Message &msg) {return;}
-    void receive(ReplCrash &msg) override;
-    void receive(ReplSpeed &msg) override;
-    void receive(ReplStart &msg) override;
+
+    MPI_Comm com;
+
+    virtual void receive(Message &msg)
+    {}
+    virtual void receive(ReplCrash &msg){};
+    virtual void receive(ReplSpeed &msg){};
+    virtual void receive(ReplStart &msg){};
 
     virtual void execute(QueueMessage &msg) {return;}
 
@@ -32,7 +38,7 @@ public:
 private:
     bool crashed;
     bool started;
-    repl::ReplSpeed speed;
+    ReplSpeed speed;
     std::string private_folder_location;
 
     std::deque<QueueMessage> action_queue;
