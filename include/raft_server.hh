@@ -1,12 +1,8 @@
 #pragma once
 
-#include <chrono>
-#include <cstddef>
-#include <optional>
 #include <queue>
 
 #include <mpi.h>
-#include "message.hh"
 #include "repl_message.hh"
 #include "rpc.hh"
 #include "processus.hh"
@@ -35,18 +31,8 @@ namespace raft
         void work() override;
 
     private:
-        bool crashed;
-        bool started;
-        repl::ReplSpeed speed;
-        std::string private_folder_location;
         std::map<int, std::string> uids;
-
-
-        std::queue<std::shared_ptr<message::Message>> message_queue;
         
-        void receive(ReplCrash &msg) override;
-        void receive(ReplSpeed &msg) override;
-        void receive(ReplStart &msg) override;
         void receive(RpcRequestVote &msg) override;
         void receive(RpcAppendEntries &msg) override;
         void receive(RpcVoteResponse &msg) override;

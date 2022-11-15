@@ -65,3 +65,33 @@ void Processus::run()
         work();
     }
 }
+
+void Processus::receive(ReplCrash &msg)
+{
+    std::cout << "Processus(" << state.get_rank()
+              << ") is crashing. Bravo Six, going dark" << std::endl;
+
+    crashed = true;
+    auto response = std::make_shared<message::HandshakeSuccess>(msg.sender_rank, state.get_rank());
+    send(msg.sender_rank, response);
+}
+
+void Processus::receive(ReplSpeed &msg)
+{
+    std::cout << "Processus(" << state.get_rank()
+              << ") is changing speed from " << speed << " to "
+              << msg.speed << std::endl;
+
+    speed = msg.speed;
+    auto response = std::make_shared<message::HandshakeSuccess>(msg.sender_rank, state.get_rank());
+    send(msg.sender_rank, response);
+}
+
+void Processus::receive(ReplStart &msg)
+{
+    std::cout << "Processus(" << state.get_rank() << ") is starting" << std::endl;
+
+    started = true;
+    auto response = std::make_shared<message::HandshakeSuccess>(msg.sender_rank, state.get_rank());
+    send(msg.sender_rank, response);
+}
