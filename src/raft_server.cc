@@ -21,6 +21,7 @@ namespace raft
         , crashed(false)
         , started(false)
         , speed(repl::ReplSpeed::FAST)
+        , private_folder_location("server_files/server_" + state.get_rank() + "/")
     {
         MPI_Comm_rank(com, &uid);
         MPI_Comm_size(com, &nb_servers);
@@ -90,7 +91,7 @@ namespace raft
     send(msg.sender_rank, response);
   }
     
-  virtual void receive(ReplSpeed &msg)
+  void RaftServer::receive(ReplSpeed &msg)
   {
     std::cout << "RaftServer(" << state.get_rank()
               << ") is changing speed from " << speed << " to "
@@ -101,13 +102,157 @@ namespace raft
     send(msg.sender_rank, response);
   }
   
-  virtual void receive(ReplStart &msg)
+  void RaftServer::receive(ReplStart &msg)
   {
     std::cout << "RaftServer(" << state.get_rank() << ") is starting" << std::endl;
 
     started = true;
     auto response = std::make_shared<message::HandshakeSuccess>(msg.sender_rank, state.get_rank());
     send(msg.sender_rank, response);
+  }
+
+  void RaftServer::receive(RpcRequestVote &msg) {
+    if (!started || crashed) {
+      return;
+    }
+    msg = msg;
+  }
+
+  void RaftServer::receive(RpcAppendEntries &msg) {
+    if (!started || crashed) {
+      return;
+    }
+    msg = msg;
+  }
+
+  void RaftServer::receive(RpcVoteResponse &msg) {
+    if (!started || crashed) {
+      return;
+    }
+    msg = msg;
+  }
+
+  void RaftServer::receive(RpcAppendEntriesResponse &msg) {
+    if (!started || crashed) {
+      return;
+    }
+    msg = msg;
+  }
+
+  void RaftServer::receive(HandshakeFailure &msg) {
+    if (!started || crashed) {
+      return;
+    }
+    msg = msg;
+  }
+
+  void RaftServer::receive(HandshakeSuccess &msg) {
+    if (!started || crashed) {
+      return;
+    }
+    msg = msg;
+  }
+
+  void RaftServer::receive(ClientLoad &msg) {
+    if (!started || crashed) {
+      return;
+    }
+    std::cout << "RaftServer(" << state.get_rank()
+              << ") is cloading file " << msg["FILENAME"] << std::endl;
+
+    // LOAD FILE
+
+    std::string filename = private_folder_location + msg["FILENAME"];
+    std::string content = msg["SOME_TEXT"];
+
+    MPI_File file;
+    MPI_File_open(MPI_COMM_SELF, filename.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &file);
+
+    MPI_File_write(file, content.c_str(), content.size(), MPI_CHAR, MPI_STATUS_IGNORE);
+
+    MPI_File_close(&file);
+
+    int uid = 0;
+    while (uids.find(uid) != uids.end())
+    {
+      uid++;
+    }
+    uids[uid] = filename;
+
+    json custom_data;
+    custom_data["UID"] = uid;
+
+    send(j["SENDER"],
+         std::make_shared<message::Handshake_message>(
+             message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank(), custom_data));
+
+    // BROADCAST TO SERVERS new file
+  }
+
+  void RaftServer::receive(ClientList &msg)
+    if (!started || crashed) {
+      return;
+    }
+  {
+    std::cout << "RaftServer(" << state.get_rank()
+              << ") is going to list all files" << std::endl;
+
+    // LIST FILES
+    std::vector<int> list_uids;
+    for (const auto &[key, value] : uids)
+    {
+      list_uids.push_back(key);
+    }
+
+    json custom_data;
+    custom_data["UIDS"] = list_uids;
+
+    send(j["SENDER"],
+         std::make_shared<message::Handshake_message>(
+             message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank(), custom_data));
+  }
+  
+  void RaftServer::receive(ClientAppend &msg)
+  {
+    if (!started || crashed) {
+      return;
+    }
+    std::cout << "RaftServer(" << state.get_rank() << ") is adding " << client_message["SOME_TEXT"] << " to file with uid " << client_message["UID"] << std::endl;
+
+    // APPEND TO FILE
+    int uid = client_message["UID"];
+    std::string content = client_message["SOME_TEXT"];
+
+    MPI_File file;
+    MPI_File_open(MPI_COMM_SELF, uids[uid].c_str(), MPI_MODE_APPEND, MPI_INFO_NULL, &file);
+
+    MPI_File_write(file, content.c_str(), content.size(), MPI_CHAR, MPI_STATUS_IGNORE);
+
+    MPI_File_close(&file);
+
+    send(j["SENDER"],
+         std::make_shared<message::Handshake_message>(
+             message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank()));
+
+    // BROADCAST TO SERVERS file update
+  }
+
+  void RaftServer::receive(ClientDelete &msg)
+  {
+    if (!started || crashed) {
+      return;
+    }
+    std::cout << "RaftServer(" << state.get_rank() << ") is deleting file with uid " << client_message["UID"] << std::endl;
+    
+    //delete file
+    MPI_File_delete(uids[client_message["UID"]].c_str(), MPI_INFO_NULL);
+    uids.erase(client_message["UID"]);
+
+    send(j["SENDER"],
+         std::make_shared<message::Handshake_message>(
+             message::HandshakeStatus::SUCCESS, j["SENDER"], state.get_rank()));
+    
+    //BROADCAST TO SERVERS file deleted
   }
 
   /*void RaftServer::on_receive_repl(std::shared_ptr<message::Message> message)
@@ -149,7 +294,7 @@ namespace raft
                    message::HandshakeStatus::SUCCESS, j["SENDER"],
                    state.get_rank()));
       }
-  }*/
+  }
 
     void RaftServer::on_receive_rpc(std::shared_ptr<RPC> message)
     {
@@ -316,6 +461,6 @@ namespace raft
       broadcast_to_servers(msg);
       
       return msg;
-  };
+  };*/
     
 } // namespace raft

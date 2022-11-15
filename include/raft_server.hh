@@ -38,7 +38,9 @@ namespace raft
         bool crashed;
         bool started;
         repl::ReplSpeed speed;
+        std::string private_folder_location;
         std::map<int, std::string> uids;
+
 
         std::queue<std::shared_ptr<message::Message>> message_queue;
         
@@ -56,13 +58,13 @@ namespace raft
         void receive(ClientAppend &msg) override;
         void receive(ClientDelete &msg) override;
 
-        void on_receive_repl(std::shared_ptr<message::Message> message);
+        /*void on_receive_repl(std::shared_ptr<message::Message> message);
 
         void on_receive_rpc(std::shared_ptr<message::Message> message);
 
         void process_message_client(std::shared_ptr<message::Message> message);
 
-        void broadcast_to_servers(std::shared_ptr<message::Message> message);
+        void broadcast_to_servers(std::shared_ptr<message::Message> message);*/
 
         std::shared_ptr<RPC> request_vote_rpc();
 
