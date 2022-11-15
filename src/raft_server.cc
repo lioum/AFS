@@ -18,9 +18,6 @@ namespace raft
 
     RaftServer::RaftServer(MPI_Comm com)
         : Server(com)
-        , crashed(false)
-        , started(false)
-        , speed(repl::ReplSpeed::FAST)
         , private_folder_location("server_files/server_" + state.get_rank() + "/")
     {
         MPI_Comm_rank(com, &uid);

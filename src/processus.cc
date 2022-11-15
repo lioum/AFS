@@ -5,6 +5,9 @@
 
 Processus::Processus(MPI_Comm com)
     : com(com)
+    , crashed(false)
+    , started(false)
+    , speed(repl::ReplSpeed::FAST)
 {}
 
 

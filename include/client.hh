@@ -12,14 +12,9 @@ namespace client
     public:
         Client(MPI_Comm com, int nb_servers);
 
-        void on_message_callback(std::shared_ptr<message::Message> message) override;
-
         void work() override;
 
     private:
-        std::queue<HandshakeSuccess> handshake_queue;
-        std::map<int, std::string> uids;
-
         int target_rank;
         bool target_alive = false;
 
