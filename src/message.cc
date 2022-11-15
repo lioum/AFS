@@ -1,48 +1,86 @@
 #include "message.hh"
-#include <memory>
-#include <iostream>
-#include "repl_message.hh"
-#include "handshake_message.hh"
 
-namespace message
+void ReplCrash::accept(Processus &process)
 {
-    Message::Message(MessageType type, int sender_rank, int target_rank)
-        : type(type)
-        , sender_rank(sender_rank)
-        , target_rank(target_rank)
-    {}
+    process.receive(*this);
+}
 
-    std::string Message::serialize_json() const
-    {
-        json j;
+void ReplStart::accept(Processus &process)
+{
+    process.receive(*this);
+}
 
-        j["MESSAGE_TYPE"] = this->type;
+void ReplSpeed::accept(Processus &process)
+{
+    process.receive(*this);
+}
 
-        j["SENDER"] = this->sender_rank;
-        j["TARGET"] = this->target_rank;
-        
-        return j;
-    }
+void RpcRequestVote::accept(Processus &process)
+{
+    process.receive(*this);
+}
 
-    std::shared_ptr<Message> Message::deserialize(const std::string &message)
-    {
-        json j = json::parse(message);
-        MessageType type = static_cast<MessageType>(j["MESSAGE_TYPE"]);
-        if (type == MessageType::REPL)
-        {
-          return repl::REPL_message::deserialize(message);
-        }
-        else if (type == MessageType::RPC) // RPC
-        {
-            return raft::RPC::deserialize(message);
-        }
-        else if (type == MessageType::HANDSHAKE)
-        {
-            return Handshake_message::deserialize(message);
-        }
-        else
-        {
-            throw std::runtime_error("Unknown message type");
-        }
-    }
+void RpcAppendEntries::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
+void RpcVoteResponse::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
+void RpcAppendEntriesResponse::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
+void HandshakeFailure::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
+void HandshakeSuccess::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
+void ClientLoad::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
+void ClientLoad::call_execute(Processus &process) 
+{
+    process.call_execute(*this);
+}
+
+void ClientList::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
+void ClientList::call_execute(Processus &process) 
+{
+    process.call_execute(*this);
+}
+
+void ClientAppend::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
+void ClientAppend::call_execute(Processus &process) 
+{
+    process.call_execute(*this);
+}
+
+void ClientDelete::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
+void ClientDelete::call_execute(Processus &process) 
+{
+    process.call_execute(*this);
 }
