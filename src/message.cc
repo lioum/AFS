@@ -1,4 +1,4 @@
-#include "message.hh"
+#include "processus.hh"
 
 
 void ReplCrash::accept(Processus &process)
@@ -53,7 +53,7 @@ void ClientLoad::accept(Processus &process)
 
 void ClientLoad::call_execute(Processus &process) 
 {
-    process.call_execute(*this);
+    process.execute(*this);
 }
 
 void ClientList::accept(Processus &process)
@@ -63,7 +63,7 @@ void ClientList::accept(Processus &process)
 
 void ClientList::call_execute(Processus &process) 
 {
-    process.call_execute(*this);
+    process.execute(*this);
 }
 
 void ClientAppend::accept(Processus &process)
@@ -73,7 +73,7 @@ void ClientAppend::accept(Processus &process)
 
 void ClientAppend::call_execute(Processus &process) 
 {
-    process.call_execute(*this);
+    process.execute(*this);
 }
 
 void ClientDelete::accept(Processus &process)
@@ -83,11 +83,101 @@ void ClientDelete::accept(Processus &process)
 
 void ClientDelete::call_execute(Processus &process) 
 {
-    process.call_execute(*this);
+    process.execute(*this);
 }
 
+std::string ReplCrash::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+} 
+ 
+std::string ReplStart::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
 
-std::unique_ptr<Message> deserialize_message(const json &j)
+std::string ReplSpeed::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::string RpcRequestVote::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::string RpcAppendEntries::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::string RpcVoteResponse::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::string RpcAppendEntriesResponse::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::string HandshakeFailure::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::string HandshakeSuccess::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::string ClientLoad::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::string ClientList::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::string ClientAppend::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::string ClientDelete::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::unique_ptr<Message> Message::deserialize(const json &j)
 {
     auto msg_type = j["type"].get<MessageType>();
 

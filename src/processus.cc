@@ -1,17 +1,18 @@
 #include "processus.hh"
+
 #include <mpi.h>
-#include "raftstate.hh"
+
 #include "repl.hh"
+#include "utils.hh"
 
-Processus::Processus(MPI_Comm com)
+Processus::Processus(MPI_Comm com, int nb_servers)
     : com(com)
-    , crashed(false)
-    , started(false)
-    , speed(repl::ReplSpeed::FAST)
-{}
+    , nb_servers(nb_servers)
+{
+    MPI_Comm_rank(com, &uid);
+}
 
-
-std::shared_ptr<message::Message> Processus::listen()
+std::shared_ptr<Message> Processus::listen()
 {
     int flag;
     MPI_Status status;
@@ -26,87 +27,96 @@ std::shared_ptr<message::Message> Processus::listen()
     MPI_Get_count(&status, MPI_CHAR, &count);
 
     auto buffer = std::vector<char>(count);
-    int err = MPI_Recv(buffer.data(), count, MPI_CHAR, source, tag, state.get_comm(), &status);
+    int err =
+        MPI_Recv(buffer.data(), count, MPI_CHAR, source, tag, com, &status);
     if (err != 0)
     {
-      char *error_string =
-          (char *)malloc((sizeof(char)) * MPI_MAX_ERROR_STRING);
-      int len;
-      MPI_Error_string(err, error_string, &len);
-      std::cout << "Receiving: " << error_string << std::endl;
+        char *error_string =
+            (char *)malloc((sizeof(char)) * MPI_MAX_ERROR_STRING);
+        int len;
+        MPI_Error_string(err, error_string, &len);
+        std::cout << "Receiving: " << error_string << std::endl;
     }
     std::string s(buffer.begin(), buffer.end());
-    std::shared_ptr<message::Message> message = message::Message::deserialize(s);
+    std::shared_ptr<Message> message = Message::deserialize(s);
     return message;
 }
 
-void Processus::send(int target_rank, std::shared_ptr<message::Message> message)
+void Processus::send(const Message &msg)
 {
-    auto serialization = message->serialize();
-    int err =
-        MPI_Send(serialization.data(), serialization.length(), MPI_CHAR,
-                 target_rank, 0, state.get_comm());
+    auto serialization = msg.serialize();
+    int err = MPI_Send(serialization.data(), serialization.length(), MPI_CHAR,
+                       msg.target_rank, 0, com);
     if (err != 0)
     {
-      char *error_string =
-          (char *)malloc((sizeof(char)) * MPI_MAX_ERROR_STRING);
-      int len;
-      MPI_Error_string(err, error_string, &len);
-      std::cout << "Send: " << error_string << std::endl;
+        char *error_string =
+            (char *)malloc((sizeof(char)) * MPI_MAX_ERROR_STRING);
+        int len;
+        MPI_Error_string(err, error_string, &len);
+        std::cout << "Send: " << error_string << std::endl;
     }
 }
 
-void Processus::handshake_success(int target_rank)
+void Processus::broadcast_to_servers(Message &message)
 {
-    auto response = std::make_shared<message::HandshakeSuccess>(target_rank,
-     state.get_rank());
-    send(target_rank, response);
-}
+    // LOG ACTION TO LOGFILE (useful in order to recover changes for crashed
+    // server coming back online)
 
-void Processus::handshake_success(int target_rank, json data)
-{
-    auto response = std::make_shared<message::HandshakeSuccess>(target_rank,
-     state.get_rank(), data);
-    send(target_rank, response);
+    for (int i = 1; i <= nb_servers; i++)
+    {
+        if (i != uid)
+        {
+            message.target_rank = i;
+            send(message);
+        }
+    }
 }
 
 void Processus::run()
 {
     while (true)
     {
-        std::shared_ptr<message::Message> message = listen();
+        std::shared_ptr<Message> message = listen();
         if (message.get() != nullptr)
         {
-            message->accept(this);
+            message->accept(*this);
         }
         work();
     }
 }
 
-void Processus::receive(ReplCrash &msg)
+InternProcessus::InternProcessus(MPI_Comm com, int nb_servers,
+                                 const std::filesystem::path &root_folder_path)
+    : Processus(com, nb_servers)
+    , crashed(false)
+    , started(false)
+    , speed(Speed::FAST)
 {
-    std::cout << "Processus(" << state.get_rank()
-              << ") is crashing. Bravo Six, going dark" << std::endl;
+    working_folder_path == root_folder_path / std::to_string(uid);
 
+    if (!std::filesystem::exists(working_folder_path))
+        std::filesystem::create_directory(working_folder_path);
+}
+
+void InternProcessus::receive(ReplCrash &msg)
+{
+    std::cout << "Processus(" << uid << ") is crashing." << std::endl;
     crashed = true;
-    handshake_success(msg.sender_rank);
+    send(HandshakeSuccess(msg.sender_rank, uid));
 }
 
-void Processus::receive(ReplSpeed &msg)
+void InternProcessus::receive(ReplSpeed &msg)
 {
-    std::cout << "Processus(" << state.get_rank()
-              << ") is changing speed from " << speed << " to "
-              << msg.speed << std::endl;
-
+    std::cout << "Processus(" << uid << ") is changing speed from "
+              << as_integer(speed) << " to " << as_integer(msg.speed)
+              << std::endl;
     speed = msg.speed;
-    handshake_success(msg.sender_rank);
+    send(HandshakeSuccess(msg.sender_rank, uid));
 }
 
-void Processus::receive(ReplStart &msg)
+void InternProcessus::receive(ReplStart &msg)
 {
-    std::cout << "Processus(" << state.get_rank() 
-              << ") is starting" << std::endl;
-
+    std::cout << "Processus(" << uid << ") is starting" << std::endl;
     started = true;
-    handshake_success(msg.sender_rank);
+    send(HandshakeSuccess(msg.sender_rank, uid));
 }

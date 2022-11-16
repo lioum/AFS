@@ -3,43 +3,64 @@
 #include <chrono>
 #include <cstddef>
 #include <deque>
+#include <filesystem>
 #include <mpi.h>
 #include <optional>
 
-class Message;
+#include "message.hh"
 
 class Processus
 {
 public:
-    Processus(MPI_Comm com);
+    Processus(MPI_Comm com, int nb_servers);
 
     std::shared_ptr<Message> listen();
+    void send(const Message &message);
+    void broadcast_to_servers(Message &message);
 
-    void send(int target_rank, std::shared_ptr<Message> message);
-
-    void handshake_success(int target_rank);
-    void handshake_success(int target_rank, json data);
-
-    void run(); 
+    void run();
     virtual void work() = 0;
 
+    virtual void receive(RpcRequestVote &msg){ msg = msg;};
+    virtual void receive(RpcAppendEntries &msg){ msg = msg;};
+    virtual void receive(RpcVoteResponse &msg){ msg = msg;};
+    virtual void receive(RpcAppendEntriesResponse &msg){ msg = msg;};
+    virtual void receive(HandshakeFailure &msg){ msg = msg;};
+    virtual void receive(HandshakeSuccess &msg){ msg = msg;};
+    virtual void receive(ClientLoad &msg){ msg = msg;};
+    virtual void receive(ClientList &msg){ msg = msg;};
+    virtual void receive(ClientAppend &msg){ msg = msg;};
+    virtual void receive(ClientDelete &msg){ msg = msg;};
+    virtual void receive(ReplCrash &msg){ msg = msg;};
+    virtual void receive(ReplSpeed &msg){ msg = msg;};
+    virtual void receive(ReplStart &msg){ msg = msg;};
+
+    virtual void execute(ClientLoad &msg){ msg = msg;};
+    virtual void execute(ClientList &msg){ msg = msg;};
+    virtual void execute(ClientAppend &msg){ msg = msg;};
+    virtual void execute(ClientDelete &msg){ msg = msg;};
+
     MPI_Comm com;
 
-    virtual void receive(Message &msg)
-    {}
-    virtual void receive(ReplCrash &msg){};
-    virtual void receive(ReplSpeed &msg){};
-    virtual void receive(ReplStart &msg){};
+protected:
+    int uid; // MPI rank
+    int nb_servers; // MPI size
+};
 
-    virtual void execute(QueueMessage &msg) {return;}
+class InternProcessus : public Processus
+{
+public:
+    InternProcessus(MPI_Comm com, int nb_servers,
+                    const std::filesystem::path &root_folder_path);
 
-    MPI_Comm com;
+    virtual void receive(ReplCrash &msg) override;
+    virtual void receive(ReplSpeed &msg) override;
+    virtual void receive(ReplStart &msg) override;
 
-private:
+protected:
     bool crashed;
     bool started;
-    ReplSpeed speed;
-    std::string private_folder_location;
+    Speed speed;
 
-    std::deque<QueueMessage> action_queue;
+    std::filesystem::path working_folder_path;
 };

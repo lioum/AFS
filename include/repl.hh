@@ -1,22 +1,20 @@
 #pragma once
-#include "repl_message.hh"
-#include "server.hh"
 
 #include <mpi.h>
 
-namespace repl
+#include "processus.hh"
+
+class REPL : public Processus
 {
-    class REPL : public Server
-    {
-    public:
-        REPL(MPI_Comm com, int nb_servers);
+public:
+    REPL(MPI_Comm com, int nb_servers);
 
-        void work() override;
+    void work() override;
 
-        void on_message_callback(std::shared_ptr<message::Message> message) override;
+    virtual void receive(HandshakeFailure &msg) override;
+    virtual void REPL::receive(HandshakeSuccess &msg) override;
 
-    private:
-        std::shared_ptr<REPL_message> process_message(std::string input);
-        bool running;
-    };
-}
+private:
+    std::shared_ptr<Message> process_message(const std::string &input);
+    bool waiting_for_handshake = false;
+};

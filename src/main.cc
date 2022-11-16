@@ -2,6 +2,7 @@
 #include <string>
 #include "repl.hh"
 #include "raft_server.hh"
+#include "client.hh"
 
 int main (int argc, char *argv[])
 {
@@ -22,18 +23,20 @@ int main (int argc, char *argv[])
     if (rank == 0)
     {
         //std::cout << rank << ": I'm the REPL" << std::endl;
-        repl::REPL repl(MPI_COMM_WORLD, nb_servers);
+        REPL repl(MPI_COMM_WORLD, nb_servers);
         repl.run();
     }
     else if (rank < nb_servers + 1)
     {
         //std::cout << rank << ": I'm a server" << std::endl;
-        raft::RaftServer server(MPI_COMM_WORLD, nb_servers);
+        RaftServer server(MPI_COMM_WORLD, nb_servers, "server_folders/serve_" + std::to_string(rank) + "/");
         server.run();
     }
     else
     {
         //std::cout << rank << ": I'm a client" << std::endl;
+        Client client(MPI_COMM_WORLD, nb_clients, "client_folders/serve_" + std::to_string(rank) + "/");
+        client.run();
     }
     MPI_Finalize();
     

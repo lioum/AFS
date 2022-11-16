@@ -1,147 +1,166 @@
-#include "raft_server.hh"
+#include "client.hh"
 
 #include <chrono>
 #include <thread>
 
-#include "client_message.hh"
-#include "handshake_message.hh"
-#include "repl_message.hh"
 #include "utils.hh"
 
-Client::Client(MPI_Comm com, int nb_servers) : Processus(com)
-        , private_folder_location("client_files/client_" + state.get_rank() + "/")
+Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
+                               MPI_Comm com, int nb_servers,
+                               const std::filesystem::path &root_folder_path)
 {
-  // Read commands from file and load them to the queue;
+    Client client(com, nb_servers, root_folder_path);
 
-  MPI_File file_tmp;
+    auto command_file_real_path = command_file_path.is_relative()
+        ? root_folder_path / command_file_path
+        : command_file_path;
 
-  MPI_File_open(MPI_COMM_SELF, "bit.txt", MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &file_tmp);
+    std::ifstream file(command_file_real_path);
 
-  MPI_File_write(file_tmp, "byte", 4, MPI_CHAR, MPI_STATUS_IGNORE);
+    if (!file)
+        throw std::runtime_error("Could not open command file");
 
-  MPI_File_close(&file_tmp);
+    auto &messages = client.messages;
+    auto target_rank = client.target_rank;
+    int sender_rank = client.uid;
 
-  std::string filename = private_folder_location + "commands_" + std::to_string(state.get_rank()) + ".txt";
-  int size = 1000;
-  char *buf = (char *)calloc(size, sizeof(char));
-  MPI_File file;
+    std::string line;
 
-  int open_failed = MPI_File_open(MPI_COMM_SELF, filename.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &file);
-  if (open_failed)
-  {
-    std::cout << "Failed to open: " << filename << std::endl;
-  }
-  MPI_File_read_all(file, buf, size, MPI_CHAR, MPI_STATUS_IGNORE);
-  std::stringstream stream = chars_to_stream(buf, size);
-
-  std::string line;
-  while (std::getline(stream, line))
-  {
-
-    std::vector<std::string> inline_words = split_words(line, ' ');
-    target_rank = 0;
-    int sender_rank = state.get_rank();
-
-    // Get target rank
-    // Looking for living target
-    while (!target_alive)
+    while (std::getline(file, line))
     {
-      target_rank += 1;
-      std::cout << "target rank: " << target_rank << std::endl;
-      // Test if target server answers
-      std::shared_ptr<message::Message> test_message = std::make_shared<message::Client_message>(message::ClientAction::LOAD, target_rank, sender_rank, "", "");
-      ;
-      send(target_rank, test_message);
+        std::vector<std::string> inline_words = split_words(line, ' ');
+
+        std::cout << "exit while with target_alive: " << client.target_rank
+                  << std::endl;
+
+        if (inline_words[0] == "LOAD")
+        {
+            if (inline_words.size() < 2)
+            {
+                std::cout << "Filename required after LOAD in file: "
+                          << command_file_real_path << std::endl;
+                throw std::runtime_error("Failed to parse command file: " + command_file_real_path.string());
+            }
+            std::string filename = inline_words[1];
+            // Read file content to content
+            std::string content = readFileIntoString(filename);
+            messages.push_back(std::make_shared<ClientLoad>(
+                target_rank, sender_rank, filename, content));
+        }
+        else if (inline_words[0] == "LIST")
+        {
+            if (inline_words.size() > 1)
+            {
+                std::cout << "No text required after LIST in file: " << command_file_real_path
+                          << std::endl;
+                throw std::runtime_error("Failed to parse command file: " + command_file_real_path.string());
+            }
+            messages.push_back(
+                std::make_shared<ClientList>(target_rank, sender_rank, "", ""));
+        }
+        else if (inline_words[0] == "APPEND")
+        {
+            if (inline_words.size() < 3)
+            {
+                std::cout
+                    << "filename and content required after APPEND in file: "
+                    << command_file_real_path << std::endl;
+                throw std::runtime_error("Failed to parse command file: " + command_file_real_path.string());
+            }
+            messages.push_back(std::make_shared<ClientAppend>(
+                target_rank, sender_rank, inline_words[1], inline_words[2]));
+        }
+        else if (inline_words[0] == "DELETE")
+        {
+            if (inline_words.size() < 2)
+            {
+                std::cout << "Filename required after DELETE in file: "
+                          << command_file_real_path << std::endl;
+                throw std::runtime_error("Failed to parse command file: " + command_file_real_path.string());
+            }
+            messages.push_back(std::make_shared<ClientDelete>(
+                target_rank, sender_rank, inline_words[1], ""));
+        }
     }
 
-    std::cout << "exit while with target_alive: " << target_rank << std::endl;
+    return client;
+}
 
-    if (inline_words[0] == "LOAD")
-    {
-      if (inline_words.size() < 2)
-      {
-        std::cout << "Filename required after LOAD in file: " << filename << std::endl;
-        exit(0);
-      }
+Client::Client(MPI_Comm com, int nb_servers,
+               const std::filesystem::path &clients_root)
+    : InternProcessus(com, nb_servers, clients_root)
 
-      // Read file content to content
-      std::string content = readFileIntoString(filename);
-
-      action_queue.push_back([this, content, inline_words]() {
-        std::shared_ptr<message::Message> message = std::make_shared<message::Client_message>(message::ClientAction::LOAD, target_rank, state.get_rank(), inline_words[1], content);
-        send(target_rank, message);
-      });
-    }
-    else if (inline_words[0] == "LIST")
-    {
-      if (inline_words.size() > 1)
-      {
-        std::cout << "No text required after LIST in file: " << filename << std::endl;
-        exit(0);
-      }
-      action_queue.push_back([this]() {
-        std::shared_ptr<message::Message> message = std::make_shared<message::Client_message>(message::ClientAction::LIST, target_rank, state.get_rank(), "", "");
-        send(target_rank, message);
-      });
-    }
-    else if (inline_words[0] == "APPEND")
-    {
-      if (inline_words.size() < 3)
-      {
-        std::cout << "filename and content required after APPEND in file: " << filename << std::endl;
-        exit(0);
-      }
-      action_queue.push_back([this, inline_words]() {
-        std::shared_ptr<message::Message> message = std::make_shared<message::Client_message>(message::ClientAction::APPEND, target_rank, state.get_rank(), inline_words[1], inline_words[2]);
-        send(target_rank, message);
-      });
-    }
-    else if (inline_words[0] == "DELETE")
-    {
-      if (inline_words.size() < 2)
-      {
-        std::cout << "Filename required after DELETE in file: " << filename << std::endl;
-        exit(0);
-      }
-      action_queue.push_back([this, inline_words]() {
-        std::shared_ptr<message::Message> message = std::make_shared<message::Client_message>(message::ClientAction::DELETE, target_rank, state.get_rank(), inline_words[1], "");
-        send(target_rank, message);
-      });
-    }
-  }
+    , messages_index(0)
+    , target_rank(-1)
+{
 }
 
 void Client::work()
 {
-  if (!started || crashed)
-  {
-    return;
-  }
+    if (!started || crashed)
+    {
+        return;
+    }
+    std::chrono::milliseconds now =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch());
 
-  if (!action_queue.empty())
-  {
-    action_queue.front()();
-    action_queue.pop_front();
-  }
+    // Looking for living target
+    if (now > handshake_timeout_till)
+    {
+        std::cout << "Client " << uid
+                  << " timed out waiting for handshake from server "
+                  << target_rank << std::endl;
+        broadcast_to_servers(*messages[messages_index]);
+        waiting_for_handshake = true;
+    }
+    
+    if (!waiting_for_handshake)
+    {
+        send(*messages[messages_index]);
+        waiting_for_handshake = true;
+        handshake_timeout_till = now + handshake_timeout;
+    }
 
-  std::this_thread::sleep_for(
-      std::chrono::milliseconds(speed * speed * 1000));
+    int speed_val = as_integer(speed);
+
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(speed_val * speed_val * 1000));
 }
 
 void Client::receive(HandshakeFailure &msg)
 {
-  if (!started || crashed)
-  {
-    return;
-  }
-  msg = msg;
+    if (!started || crashed)
+    {
+        return;
+    }
+    if (waiting_for_handshake)
+    {
+        std::cout << "Client " << uid << " received handshake failure from server "
+              << msg.sender_rank <<std::endl;
+        waiting_for_handshake = false;
+    }
 }
 
 void Client::receive(HandshakeSuccess &msg)
 {
-  if (!started || crashed)
-  {
-    return;
-  }
-  msg = msg;
+    if (!started || crashed)
+    {
+        return;
+    }
+    if (waiting_for_handshake)
+    {
+        std::cout << "Client " << uid
+                  << " received handshake success from server "
+                  << msg.sender_rank << std::endl;
+        
+        if (msg.sender_rank != target_rank)
+        {
+            std::cout << "Client " << uid
+                      << " will use server " << msg.sender_rank << " instead of " << target_rank << " as target server" << std::endl;
+            target_rank = msg.sender_rank;
+        }
+        waiting_for_handshake = false;
+        messages_index += 1;
+    }
 }
