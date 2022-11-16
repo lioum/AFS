@@ -63,12 +63,22 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
             if (inline_words.size() < 3)
             {
                 std::cout
-                    << "filename and content required after APPEND in file: "
+                    << "uid of file and content required after APPEND in file: "
                     << command_file_real_path << std::endl;
                 throw std::runtime_error("Failed to parse command file: " + command_file_real_path.string());
             }
+            int uid_file;
+            try
+            {
+                uid_file = std::stoi(inline_words[1]);
+                
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+            }
             messages.push_back(std::make_shared<ClientAppend>(
-                target_rank, sender_rank, inline_words[1], inline_words[2]));
+                target_rank, sender_rank, uid_file, inline_words[2]));
         }
         else if (inline_words[0] == "DELETE")
         {
