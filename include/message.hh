@@ -339,7 +339,7 @@ class ClientAppend : public ClientMessage
 public:
     ClientAppend()
         : ClientMessage(MessageType::CLIENT_APPEND){};
-    ClientAppend(int target_rank, int sender_rank, const std::string &filename,
+    ClientAppend(int target_rank, int sender_rank, int uid,
                  const std::string &content)
         : ClientMessage(MessageType::CLIENT_APPEND, target_rank, sender_rank)
         , content(content)

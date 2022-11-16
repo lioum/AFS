@@ -21,24 +21,24 @@ public:
     void run();
     virtual void work() = 0;
 
-    virtual void receive(RpcRequestVote &msg){ msg = msg;};
-    virtual void receive(RpcAppendEntries &msg){ msg = msg;};
-    virtual void receive(RpcVoteResponse &msg){ msg = msg;};
-    virtual void receive(RpcAppendEntriesResponse &msg){ msg = msg;};
-    virtual void receive(HandshakeFailure &msg){ msg = msg;};
-    virtual void receive(HandshakeSuccess &msg){ msg = msg;};
-    virtual void receive(ClientLoad &msg){ msg = msg;};
-    virtual void receive(ClientList &msg){ msg = msg;};
-    virtual void receive(ClientAppend &msg){ msg = msg;};
-    virtual void receive(ClientDelete &msg){ msg = msg;};
-    virtual void receive(ReplCrash &msg){ msg = msg;};
-    virtual void receive(ReplSpeed &msg){ msg = msg;};
-    virtual void receive(ReplStart &msg){ msg = msg;};
+    virtual void receive(RpcRequestVote &){};
+    virtual void receive(RpcAppendEntries &){};
+    virtual void receive(RpcVoteResponse &){};
+    virtual void receive(RpcAppendEntriesResponse &){};
+    virtual void receive(HandshakeFailure &){};
+    virtual void receive(HandshakeSuccess &){};
+    virtual void receive(ClientLoad &){};
+    virtual void receive(ClientList &){};
+    virtual void receive(ClientAppend &){};
+    virtual void receive(ClientDelete &){};
+    virtual void receive(ReplCrash &){};
+    virtual void receive(ReplSpeed &){};
+    virtual void receive(ReplStart &){};
 
-    virtual void execute(ClientLoad &msg){ msg = msg;};
-    virtual void execute(ClientList &msg){ msg = msg;};
-    virtual void execute(ClientAppend &msg){ msg = msg;};
-    virtual void execute(ClientDelete &msg){ msg = msg;};
+    virtual void execute(ClientLoad &){};
+    virtual void execute(ClientList &){};
+    virtual void execute(ClientAppend &){};
+    virtual void execute(ClientDelete &){};
 
     MPI_Comm com;
 

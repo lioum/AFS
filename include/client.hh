@@ -15,9 +15,9 @@ public:
     void receive(HandshakeSuccess &msg) override;
 
 private:
-    int target_rank;
+    size_t messages_index = 0;
+    int target_rank = -1;
     bool target_alive = false;
-    size_t messages_index;
     bool waiting_for_handshake = false;
     int expected_handshake_rank = 0;
 

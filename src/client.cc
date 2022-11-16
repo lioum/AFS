@@ -56,7 +56,7 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
                 throw std::runtime_error("Failed to parse command file: " + command_file_real_path.string());
             }
             messages.push_back(
-                std::make_shared<ClientList>(target_rank, sender_rank, "", ""));
+                std::make_shared<ClientList>(target_rank, sender_rank));
         }
         else if (inline_words[0] == "APPEND")
         {
@@ -74,12 +74,24 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
         {
             if (inline_words.size() < 2)
             {
-                std::cout << "Filename required after DELETE in file: "
+                std::cout << "UID of file required after DELETE in file: "
                           << command_file_real_path << std::endl;
                 throw std::runtime_error("Failed to parse command file: " + command_file_real_path.string());
             }
+            int uid_file;
+            try
+            {
+                uid_file = std::stoi(inline_words[1]);
+                
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+            }
+            
+
             messages.push_back(std::make_shared<ClientDelete>(
-                target_rank, sender_rank, inline_words[1], ""));
+                target_rank, sender_rank, uid_file));
         }
     }
 
@@ -89,9 +101,6 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
 Client::Client(MPI_Comm com, int nb_servers,
                const std::filesystem::path &clients_root)
     : InternProcessus(com, nb_servers, clients_root)
-
-    , messages_index(0)
-    , target_rank(-1)
 {
 }
 

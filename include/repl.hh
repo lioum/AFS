@@ -12,7 +12,7 @@ public:
     void work() override;
 
     virtual void receive(HandshakeFailure &msg) override;
-    virtual void REPL::receive(HandshakeSuccess &msg) override;
+    virtual void receive(HandshakeSuccess &msg) override;
 
 private:
     std::shared_ptr<Message> process_message(const std::string &input);

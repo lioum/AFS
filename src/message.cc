@@ -211,4 +211,5 @@ std::unique_ptr<Message> Message::deserialize(const json &j)
     case MessageType::CLIENT_DELETE:
         return std::make_unique<ClientDelete>(j.get<ClientDelete>());
     }
+    return nullptr;
 }

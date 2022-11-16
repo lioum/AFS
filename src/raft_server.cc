@@ -70,7 +70,7 @@ void RaftServer::work()
     }
 }
 
-void RaftServer::receive(RpcRequestVote &msg)
+void RaftServer::receive(RpcRequestVote &)
 {
     if (!started || crashed)
     {
@@ -78,7 +78,7 @@ void RaftServer::receive(RpcRequestVote &msg)
     }
 }
 
-void RaftServer::receive(RpcAppendEntries &msg)
+void RaftServer::receive(RpcAppendEntries &)
 {
     if (!started || crashed)
     {
@@ -86,7 +86,7 @@ void RaftServer::receive(RpcAppendEntries &msg)
     }
 }
 
-void RaftServer::receive(RpcVoteResponse &msg)
+void RaftServer::receive(RpcVoteResponse &)
 {
     if (!started || crashed)
     {
@@ -94,7 +94,7 @@ void RaftServer::receive(RpcVoteResponse &msg)
     }
 }
 
-void RaftServer::receive(RpcAppendEntriesResponse &msg)
+void RaftServer::receive(RpcAppendEntriesResponse &)
 {
     if (!started || crashed)
     {
@@ -102,7 +102,7 @@ void RaftServer::receive(RpcAppendEntriesResponse &msg)
     }
 }
 
-void RaftServer::receive(HandshakeFailure &msg)
+void RaftServer::receive(HandshakeFailure &)
 {
     if (!started || crashed)
     {
@@ -110,7 +110,7 @@ void RaftServer::receive(HandshakeFailure &msg)
     }
 }
 
-void RaftServer::receive(HandshakeSuccess &msg)
+void RaftServer::receive(HandshakeSuccess &)
 {
     if (!started || crashed)
     {
@@ -216,7 +216,6 @@ void RaftServer::execute(ClientAppend &msg)
 
 void RaftServer::execute(ClientDelete &msg)
 {
-    MPI_File file;
     MPI_File_delete(uids[msg.uid].c_str(), MPI_INFO_NULL);
     uids.erase(msg.uid);
 
