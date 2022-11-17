@@ -21,7 +21,7 @@ void REPL::work()
         if (bite != nullptr)
         {
             send(*bite);
-            waiting_for_handshake = false;
+            waiting_for_handshake = true;
         }
     }
 }

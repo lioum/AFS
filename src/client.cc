@@ -12,7 +12,7 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
     Client client(com, nb_servers, root_folder_path);
 
     auto command_file_real_path = command_file_path.is_relative()
-        ? root_folder_path / command_file_path
+        ? client.working_folder_path / command_file_path
         : command_file_path;
 
     std::ifstream file(command_file_real_path);
