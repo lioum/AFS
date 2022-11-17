@@ -92,10 +92,9 @@ InternProcessus::InternProcessus(MPI_Comm com, int nb_servers,
     , started(false)
     , speed(Speed::FAST)
 {
-    std::filesystem::path bite = std::to_string(uid);
     working_folder_path += root_folder_path;
-    working_folder_path += bite;
-    std::cout << "bite: " << working_folder_path << std::endl;
+    working_folder_path += std::to_string(uid);
+    std::cout << "path: " << working_folder_path << std::endl;
 
     if (!std::filesystem::exists(working_folder_path))
         std::filesystem::create_directory(working_folder_path);
