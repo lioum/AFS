@@ -94,7 +94,6 @@ InternProcessus::InternProcessus(MPI_Comm com, int nb_servers,
 {
     working_folder_path += root_folder_path;
     working_folder_path += std::to_string(uid);
-    std::cout << "path: " << working_folder_path << std::endl;
 
     if (!std::filesystem::exists(working_folder_path))
         std::filesystem::create_directory(working_folder_path);
