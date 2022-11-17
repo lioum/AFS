@@ -23,16 +23,21 @@ public:
 
     void work() override;
 
+    using InternProcessus::receive;
+    void receive(RpcMessage &msg) override;
     void receive(RpcRequestVote &msg) override;
     void receive(RpcAppendEntries &msg) override;
     void receive(RpcVoteResponse &msg) override;
     void receive(RpcAppendEntriesResponse &msg) override;
+
     void receive(HandshakeFailure &msg) override;
     void receive(HandshakeSuccess &msg) override;
+
+    void receive(ClientRequest &msg) override;
     void receive(ClientLoad &msg) override;
     void receive(ClientList &msg) override;
     void receive(ClientAppend &msg) override;
-    void receive(ClientDelete &msg) override;
+    void receive(ClientDelete &) override;
 
     void execute(ClientLoad &msg) override;
     void execute(ClientList &msg) override;

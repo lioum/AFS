@@ -27,6 +27,7 @@ public:
     virtual void receive(RpcAppendEntriesResponse &){};
     virtual void receive(HandshakeFailure &){};
     virtual void receive(HandshakeSuccess &){};
+    virtual void receive(ClientRequest &){};
     virtual void receive(ClientLoad &){};
     virtual void receive(ClientList &){};
     virtual void receive(ClientAppend &){};
@@ -34,11 +35,7 @@ public:
     virtual void receive(ReplCrash &){};
     virtual void receive(ReplSpeed &){};
     virtual void receive(ReplStart &){};
-
-    virtual void execute(ClientLoad &){};
-    virtual void execute(ClientList &){};
-    virtual void execute(ClientAppend &){};
-    virtual void execute(ClientDelete &){};
+    virtual void receive(RpcMessage &) {};
 
     MPI_Comm com;
 
@@ -53,9 +50,15 @@ public:
     InternProcessus(MPI_Comm com, int nb_servers,
                     const std::filesystem::path &root_folder_path);
 
+    virtual void receive(RpcMessage &msg) override;
     virtual void receive(ReplCrash &msg) override;
     virtual void receive(ReplSpeed &msg) override;
     virtual void receive(ReplStart &msg) override;
+
+    virtual void execute(ClientLoad &){};
+    virtual void execute(ClientList &){};
+    virtual void execute(ClientAppend &){};
+    virtual void execute(ClientDelete &){};
 
 protected:
     bool crashed;

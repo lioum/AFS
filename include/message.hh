@@ -1,14 +1,14 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 
 #include "nlohmann/json.hpp"
 
-class LogEntry;
-
 using json = nlohmann::json;
 
 class Processus;
+class InternProcessus;
 
 enum class MessageType
 {
@@ -69,61 +69,46 @@ public:
     int target_rank;
 };
 
-class ClientMessage : public Message
+class ClientRequest : public Message
 {
 public:
-    ClientMessage(MessageType type)
+    ClientRequest(MessageType type)
         : Message(type){};
-    ClientMessage(MessageType type, int target_rank, int sender_rank)
+    ClientRequest(MessageType type, int target_rank, int sender_rank)
         : Message(type, target_rank, sender_rank){};
     
     //virtual std::string serialize() const override;
+    virtual void accept(Processus &process) override;
 
-    virtual void call_execute(Processus &process) = 0;
+    virtual void call_execute(InternProcessus &process) = 0;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientMessage, type, sender_rank, target_rank)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientRequest, type, sender_rank, target_rank)
 
 class LogEntry
 {
 public:
-    LogEntry() = default;
-    LogEntry(int term, std::shared_ptr<ClientMessage> command)
-        : term(term)
-        , command(command)
+    LogEntry(unsigned int term, std::string command, unsigned int client_id)
+        : term(term), command(command), client_id(client_id)
     {}
 
-        virtual void accept(std::shared_ptr<Processus> process) = 0;
+    unsigned int term;
+    std::string command;
+    unsigned int client_id;
+    //unsigned int command_uid;
+};
 
-        const MessageType type;
-        const unsigned int sender_rank;
-        const unsigned int target_rank;
-    };
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LogEntry, term, command, client_id)
 
-    class LogEntry
-    {
-    public:
-        LogEntry(unsigned int term, std::string command, unsigned int client_id)
-            : term(term), command(command), client_id(client_id)
-        {}
-    
-        unsigned int term;
-        std::string command;
-        unsigned int client_id;
-        //unsigned int command_uid;
-    };
-
-    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LogEntry, term, command, client_id)
-
-    class ReplCrash : public Message
-    {
-    public:
-        ReplCrash()
-            : Message(MessageType::REPL_CRASH)
-        {}
-        ReplCrash(unsigned int target_rank, unsigned int sender_rank)
-            : Message(MessageType::REPL_CRASH, target_rank, sender_rank)
-        {}
+class ReplCrash : public Message
+{
+public:
+    ReplCrash()
+        : Message(MessageType::REPL_CRASH)
+    {}
+    ReplCrash(unsigned int target_rank, unsigned int sender_rank)
+        : Message(MessageType::REPL_CRASH, target_rank, sender_rank)
+    {}
 
     virtual std::string serialize() const override;
     void accept(Processus &process) override;
@@ -174,127 +159,123 @@ public:
     Speed speed = Speed::MEDIUM;
 };
 
-    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplSpeed, type, sender_rank,
-                                       target_rank, speed)
-    
-    class RpcMessage : public Message
-    {
-    public:
-        RpcMessage(MessageType type)
-            : Message(type){};
-        RpcMessage(MessageType type, unsigned int target_rank, unsigned int sender_rank, unsigned int term)
-            : Message(type, target_rank, sender_rank)
-            , term(term)
-        {}
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplSpeed, type, sender_rank,
+                                    target_rank, speed)
 
-        void accept(std::shared_ptr<Processus> process) override
-        {
-            process->receive(this);
-        }
+class RpcMessage : public Message
+{
+public:
+    RpcMessage(MessageType type)
+        : Message(type){};
+    RpcMessage(MessageType type, int target_rank, int sender_rank, int term)
+        : Message(type, target_rank, sender_rank)
+        , term(term)
+    {}
 
-        unsigned int term;
-    };
+    void accept(Processus &process) override;
 
-    class RpcRequestVote : public RpcMessage
-    {
-    public:
-        RpcRequestVote()
-            : RpcMessage(MessageType::RPC_REQUEST_VOTE){};
-        RpcRequestVote(unsigned int target_rank, unsigned int sender_rank, unsigned int term, unsigned int candidate_uid,
-                       int last_log_index, int last_log_term)
-            : RpcMessage(MessageType::RPC_REQUEST_VOTE, target_rank, sender_rank, term)
-            , candidate_uid(candidate_uid)
-            , last_log_index(last_log_index)
-            , last_log_term(last_log_term)
-        {}
+    unsigned int term;
+};
 
-        void accept(std::shared_ptr<Processus> process) override
-        {
-            RpcMessage::accept(process);
-            process->receive(this);
-        }
+class RpcRequestVote : public RpcMessage
+{
+public:
+    RpcRequestVote()
+        : RpcMessage(MessageType::RPC_REQUEST_VOTE){};
+    RpcRequestVote(int target_rank, int sender_rank, int term, 
+                   unsigned int candidate_uid, unsigned int last_log_index, 
+                   unsigned int last_log_term)
+        : RpcMessage(MessageType::RPC_REQUEST_VOTE, target_rank, sender_rank, term)
+        , candidate_uid(candidate_uid)
+        , last_log_index(last_log_index)
+        , last_log_term(last_log_term)
+    {}
 
-        unsigned int candidate_uid;
-        unsigned int last_log_index;
-        unsigned int last_log_term;
-    };
+    virtual std::string serialize() const override;
+    void accept(Processus &process) override;
+
+    unsigned int candidate_uid;
+    unsigned int last_log_index;
+    unsigned int last_log_term;
+};
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcRequestVote, type, sender_rank,
                                    target_rank, term, last_log_index,
                                    last_log_term)
 
-    class RpcAppendEntries : public RpcMessage
-    {
-    public:
-        RpcAppendEntries()
-            : RpcMessage(MessageType::RPC_APPEND_ENTRIES){};
-        RpcAppendEntries(unsigned int target_rank, unsigned int sender_rank, unsigned int term, unsigned int leader_uid,
-                         unsigned int prev_log_index, unsigned int prev_log_term,
-                         std::vector<LogEntry> entries, unsigned int leader_commit)
-            : RpcMessage(MessageType::RPC_APPEND_ENTRIES, target_rank, sender_rank, term)
-            , leader_uid(leader_uid)
-            , prev_log_index(prev_log_index)
-            , prev_log_term(prev_log_term)
-            , entries(entries)
-            , leader_commit(leader_commit)
-        {}
-        void accept(std::shared_ptr<Processus> process) override
-        {
-            process->receive(this);
-        }
+class RpcAppendEntries : public RpcMessage
+{
+public:
+    RpcAppendEntries()
+        : RpcMessage(MessageType::RPC_APPEND_ENTRIES){};
+    RpcAppendEntries(int target_rank, int sender_rank, int term, 
+                        int leader_uid, unsigned int prev_log_index,
+                        unsigned int prev_log_term, 
+                        std::vector<LogEntry> entries,
+                        unsigned int leader_commit)
+        : RpcMessage(MessageType::RPC_APPEND_ENTRIES, target_rank, 
+                        sender_rank, term)
+        , leader_uid(leader_uid)
+        , prev_log_index(prev_log_index)
+        , prev_log_term(prev_log_term)
+        , entries(entries)
+        , leader_commit(leader_commit)
+    {}
 
-        unsigned int leader_uid;
-        unsigned int prev_log_index;
-        unsigned prev_log_term;
-        std::vector<LogEntry> entries;
-        unsigned leader_commit;
-    };
+    virtual std::string serialize() const override;
+    void accept(Processus &process) override;
 
-    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcAppendEntries, type, sender_rank,
-                                       target_rank, term, leader_uid, prev_log_index,
-                                       prev_log_term, entries, leader_commit)
+    int leader_uid;
+    unsigned int prev_log_index;
+    unsigned int prev_log_term;
+    std::vector<LogEntry> entries;
+    unsigned int leader_commit;
+};
 
-    class RpcVoteResponse : public RpcMessage
-    {
-    public:
-        RpcVoteResponse()
-            : RpcMessage(MessageType::RPC_VOTE_RESPONSE){};
-        RpcVoteResponse(unsigned int target_rank, unsigned int sender_rank, unsigned int term,
-                        bool vote_granted)
-            : RpcMessage(MessageType::RPC_VOTE_RESPONSE, target_rank, sender_rank, term)
-            , vote_granted(vote_granted)
-        {}
-        void accept(std::shared_ptr<Processus> process) override
-        {
-            process->receive(this);
-        }
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcAppendEntries, type, sender_rank,
+                                target_rank, term, leader_uid, prev_log_index,
+                                prev_log_term, entries, leader_commit)
 
-        bool vote_granted;
-    };
+class RpcVoteResponse : public RpcMessage
+{
+public:
+    RpcVoteResponse()
+        : RpcMessage(MessageType::RPC_VOTE_RESPONSE){};
+    RpcVoteResponse(int target_rank, int sender_rank, int term, 
+                    bool vote_granted)
+        : RpcMessage(MessageType::RPC_VOTE_RESPONSE, target_rank, sender_rank, term)
+        , vote_granted(vote_granted)
+    {}
+
+    virtual std::string serialize() const override;
+    void accept(Processus &process) override;
+
+    bool vote_granted;
+};
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcVoteResponse, type, sender_rank,
                                    target_rank, term, vote_granted)
 
-    class RpcAppendEntriesResponse : public RpcMessage
-    {
-    public:
-        RpcAppendEntriesResponse()
-            : RpcMessage(MessageType::RPC_APPEND_ENTRIES_RESPONSE){};
-        RpcAppendEntriesResponse(unsigned int target_rank, unsigned int sender_rank, unsigned int term,
-                                 bool success)
-            : RpcMessage(MessageType::RPC_APPEND_ENTRIES_RESPONSE, target_rank,
-                      sender_rank, term)
-            , success(success)
-        {}
-        void accept(std::shared_ptr<Processus> process) override
-        {
-            process->receive(this);
-        }
-        bool success;
-    };
+class RpcAppendEntriesResponse : public RpcMessage
+{
+public:
+    RpcAppendEntriesResponse()
+        : RpcMessage(MessageType::RPC_APPEND_ENTRIES_RESPONSE){};
+    RpcAppendEntriesResponse(int target_rank, int sender_rank, int term,
+                             bool success)
+        : RpcMessage(MessageType::RPC_APPEND_ENTRIES_RESPONSE, target_rank,
+                sender_rank, term)
+        , success(success)
+    {}
 
-    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcAppendEntriesResponse, type,
-                                       sender_rank, target_rank, term, success)
+    virtual std::string serialize() const override;
+    void accept(Processus& process) override;
+
+    bool success;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcAppendEntriesResponse, type,
+                                sender_rank, target_rank, term, success)
 
 class HandshakeFailure : public Message
 {
@@ -338,20 +319,20 @@ public:
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HandshakeSuccess, type, sender_rank,
                                    target_rank, data)
 
-class ClientLoad : public ClientMessage
+class ClientLoad : public ClientRequest
 {
 public:
     ClientLoad()
-        : ClientMessage(MessageType::CLIENT_LOAD){};
+        : ClientRequest(MessageType::CLIENT_LOAD){};
     ClientLoad(int target_rank, int sender_rank, const std::string &filename,
                const std::string &content)
-        : ClientMessage(MessageType::CLIENT_LOAD, target_rank, sender_rank)
+        : ClientRequest(MessageType::CLIENT_LOAD, target_rank, sender_rank)
         , filename(filename)
         , content(content){};
 
     virtual std::string serialize() const override;
     void accept(Processus &process) override;
-    void call_execute(Processus &process) override;
+    void call_execute(InternProcessus &process) override;
 
     std::string filename;
     std::string content;
@@ -360,35 +341,35 @@ public:
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientLoad, type, sender_rank, target_rank,
                                    filename, content)
 
-class ClientList : public ClientMessage
+class ClientList : public ClientRequest
 {
 public:
     ClientList()
-        : ClientMessage(MessageType::CLIENT_LIST){};
+        : ClientRequest(MessageType::CLIENT_LIST){};
     ClientList(int target_rank, int sender_rank)
-        : ClientMessage(MessageType::CLIENT_LIST, target_rank, sender_rank){};
+        : ClientRequest(MessageType::CLIENT_LIST, target_rank, sender_rank){};
 
     virtual std::string serialize() const override;
     void accept(Processus &process) override;
-    void call_execute(Processus &process) override;
+    void call_execute(InternProcessus &process) override;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientList, type, sender_rank, target_rank)
 
-class ClientAppend : public ClientMessage
+class ClientAppend : public ClientRequest
 {
 public:
     ClientAppend()
-        : ClientMessage(MessageType::CLIENT_APPEND){};
+        : ClientRequest(MessageType::CLIENT_APPEND){};
     ClientAppend(int target_rank, int sender_rank, int uid,
                  const std::string &content)
-        : ClientMessage(MessageType::CLIENT_APPEND, target_rank, sender_rank)
+        : ClientRequest(MessageType::CLIENT_APPEND, target_rank, sender_rank)
         , content(content)
         , uid(uid){};
 
     virtual std::string serialize() const override;
     void accept(Processus &process) override;
-    void call_execute(Processus &process) override;
+    void call_execute(InternProcessus &process) override;
 
     std::string content;
     int uid;
@@ -397,18 +378,18 @@ public:
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientAppend, type, sender_rank, target_rank,
                                    content, uid)
 
-class ClientDelete : public ClientMessage
+class ClientDelete : public ClientRequest
 {
 public:
     ClientDelete()
-        : ClientMessage(MessageType::CLIENT_DELETE){};
+        : ClientRequest(MessageType::CLIENT_DELETE){};
     ClientDelete(int target_rank, int sender_rank, int uid)
-        : ClientMessage(MessageType::CLIENT_DELETE, target_rank, sender_rank)
+        : ClientRequest(MessageType::CLIENT_DELETE, target_rank, sender_rank)
         , uid(uid){};
 
     virtual std::string serialize() const override;
     void accept(Processus &process) override;
-    void call_execute(Processus &process) override;
+    void call_execute(InternProcessus &process) override;
 
     int uid;
 };

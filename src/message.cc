@@ -1,3 +1,4 @@
+#include "message.hh"
 #include "processus.hh"
 
 
@@ -16,23 +17,32 @@ void ReplSpeed::accept(Processus &process)
     process.receive(*this);
 }
 
+void RpcMessage::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
 void RpcRequestVote::accept(Processus &process)
 {
+    RpcMessage::accept(process);
     process.receive(*this);
 }
 
 void RpcAppendEntries::accept(Processus &process)
 {
+    RpcMessage::accept(process);
     process.receive(*this);
 }
 
 void RpcVoteResponse::accept(Processus &process)
 {
+    RpcMessage::accept(process);
     process.receive(*this);
 }
 
 void RpcAppendEntriesResponse::accept(Processus &process)
 {
+    RpcMessage::accept(process);
     process.receive(*this);
 }
 
@@ -46,52 +56,54 @@ void HandshakeSuccess::accept(Processus &process)
     process.receive(*this);
 }
 
-void ClientLoad::accept(Processus &process)
+void ClientRequest::accept(Processus &process)
 {
     process.receive(*this);
 }
 
-void ClientLoad::call_execute(Processus &process) 
+void ClientLoad::accept(Processus &process)
+{
+    ClientRequest::accept(process);
+    process.receive(*this);
+}
+
+void ClientLoad::call_execute(InternProcessus &process) 
 {
     process.execute(*this);
 }
 
 void ClientList::accept(Processus &process)
 {
+    ClientRequest::accept(process);
     process.receive(*this);
 }
 
-void ClientList::call_execute(Processus &process) 
+void ClientList::call_execute(InternProcessus &process) 
 {
     process.execute(*this);
 }
 
 void ClientAppend::accept(Processus &process)
 {
+    ClientRequest::accept(process);
     process.receive(*this);
 }
 
-void ClientAppend::call_execute(Processus &process) 
+void ClientAppend::call_execute(InternProcessus &process) 
 {
     process.execute(*this);
 }
 
 void ClientDelete::accept(Processus &process)
 {
+    ClientRequest::accept(process);
     process.receive(*this);
 }
 
-void ClientDelete::call_execute(Processus &process) 
+void ClientDelete::call_execute(InternProcessus &process) 
 {
     process.execute(*this);
 }
-
-/*std::string ClientMessage::serialize() const
-{
-    json j = *this;
-
-    return j.dump();
-}*/
 
 std::string ReplCrash::serialize() const
 {
