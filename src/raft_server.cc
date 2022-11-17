@@ -38,6 +38,8 @@ void RaftServer::work()
     {
         return;
     }
+    std::cout << "commit index : " << commit_index << std::endl;
+    std::cout << "last applied : " << last_applied << std::endl;
 
     if (commit_index != last_applied)
     {
@@ -62,6 +64,7 @@ void RaftServer::work()
         {
             role = Role::CANDIDATE;
             current_term++;
+        std::cout << "BUG HERE: logs is empty and last applied is 0" << std::endl;
             auto request = RpcRequestVote(-1, uid, current_term, last_applied,
                                           logs[last_applied].term);
             broadcast_to_servers(request);

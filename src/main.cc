@@ -30,7 +30,7 @@ int main (int argc, char *argv[])
     {
         //std::cout << rank << ": I'm a server" << std::endl;
         RaftServer server(MPI_COMM_WORLD, nb_servers, "server_folders/server_");
-        //server.run();
+        server.run();
     }
     else
     {
