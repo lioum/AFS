@@ -39,6 +39,12 @@ public:
     void execute(ClientAppend &msg) override;
     void execute(ClientDelete &msg) override;
 
+    void start_election();
+    void update_timeouts();
+    void apply_server_rules();
+    void apply_follower_and_candidate_rules();
+    void apply_leader_rules();
+
     // Fixed heartbeat timeout fitting the raft election timeout
 private:
     std::map<int, std::string> uids;
@@ -46,11 +52,13 @@ private:
 protected:
     Role role;
 
+    std::vector<LogEntry> entries;
+
     // Election
-    size_t term = 0;
     milliseconds election_timeout;
     chrono_time last_checked;
-    int leader_uid;
+    unsigned int leader_uid;
+    int vote_count;
 
     // Persistant state
     unsigned int current_term;
@@ -64,7 +72,8 @@ protected:
     std::vector<unsigned int> next_index;
     std::vector<unsigned int> match_index;
 
-    const static milliseconds heartbeat;
-    
-    std::vector<LogEntry> logs;
+    // Fixed heartbeat timeout fitting the raft election timeout
+    constexpr static milliseconds heartbeat = 30ms;
+    milliseconds heartbeat_timeout;
+    chrono_time last_heartbeat;
 };
