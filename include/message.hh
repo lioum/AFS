@@ -64,10 +64,12 @@ public:
 
     static std::unique_ptr<Message> deserialize(const json &msg);
 
-    const MessageType type;
+    MessageType type;
     int sender_rank;
     int target_rank;
 };
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Message, type, sender_rank, target_rank)
 
 class ClientMessage : public Message
 {
@@ -82,6 +84,8 @@ public:
     virtual void call_execute(Processus &process) = 0;
 };
 
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientMessage, type, sender_rank, target_rank)
+
 class LogEntry
 {
 public:
@@ -95,7 +99,7 @@ public:
     std::shared_ptr<ClientMessage> command;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LogEntry, term, command)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LogEntry, term/*, command*/)
 
 class ReplCrash : public Message
 {

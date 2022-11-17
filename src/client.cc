@@ -67,7 +67,7 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
                     << command_file_real_path << std::endl;
                 throw std::runtime_error("Failed to parse command file: " + command_file_real_path.string());
             }
-            int uid_file;
+            int uid_file = -1;
             try
             {
                 uid_file = std::stoi(inline_words[1]);
@@ -88,7 +88,7 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
                           << command_file_real_path << std::endl;
                 throw std::runtime_error("Failed to parse command file: " + command_file_real_path.string());
             }
-            int uid_file;
+            int uid_file = -1;
             try
             {
                 uid_file = std::stoi(inline_words[1]);
