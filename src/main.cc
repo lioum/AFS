@@ -29,13 +29,13 @@ int main (int argc, char *argv[])
     else if (rank < nb_servers + 1)
     {
         //std::cout << rank << ": I'm a server" << std::endl;
-        RaftServer server(MPI_COMM_WORLD, nb_servers, "server_folders/serve_" + std::to_string(rank) + "/");
+        RaftServer server(MPI_COMM_WORLD, nb_servers, "server_folders/server_");
         server.run();
     }
     else
     {
         //std::cout << rank << ": I'm a client" << std::endl;
-        Client client(MPI_COMM_WORLD, nb_clients, "client_folders/serve_" + std::to_string(rank) + "/");
+        Client client(MPI_COMM_WORLD, nb_clients, "client_folders/client_");
         client.run();
     }
     MPI_Finalize();

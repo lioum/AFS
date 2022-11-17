@@ -34,7 +34,7 @@ RaftServer::RaftServer(MPI_Comm com, int nb_servers,
 
 void RaftServer::work()
 {
-    if (!started || crashed)
+    if (crashed)
     {
         return;
     }
@@ -72,7 +72,7 @@ void RaftServer::work()
 
 void RaftServer::receive(RpcRequestVote &)
 {
-    if (!started || crashed)
+    if (crashed)
     {
         return;
     }
@@ -80,7 +80,7 @@ void RaftServer::receive(RpcRequestVote &)
 
 void RaftServer::receive(RpcAppendEntries &)
 {
-    if (!started || crashed)
+    if (crashed)
     {
         return;
     }
@@ -88,7 +88,7 @@ void RaftServer::receive(RpcAppendEntries &)
 
 void RaftServer::receive(RpcVoteResponse &)
 {
-    if (!started || crashed)
+    if (crashed)
     {
         return;
     }
@@ -96,7 +96,7 @@ void RaftServer::receive(RpcVoteResponse &)
 
 void RaftServer::receive(RpcAppendEntriesResponse &)
 {
-    if (!started || crashed)
+    if (crashed)
     {
         return;
     }
@@ -104,7 +104,7 @@ void RaftServer::receive(RpcAppendEntriesResponse &)
 
 void RaftServer::receive(HandshakeFailure &)
 {
-    if (!started || crashed)
+    if (crashed)
     {
         return;
     }
@@ -112,7 +112,7 @@ void RaftServer::receive(HandshakeFailure &)
 
 void RaftServer::receive(HandshakeSuccess &)
 {
-    if (!started || crashed)
+    if (crashed)
     {
         return;
     }
@@ -120,7 +120,7 @@ void RaftServer::receive(HandshakeSuccess &)
 
 void RaftServer::receive(ClientLoad &msg)
 {
-    if (!started || crashed)
+    if (crashed)
     {
         return;
     }
@@ -132,7 +132,7 @@ void RaftServer::receive(ClientLoad &msg)
 
 void RaftServer::receive(ClientList &msg)
 {
-    if (!started || crashed)
+    if (crashed)
     {
         return;
     }
@@ -144,7 +144,7 @@ void RaftServer::receive(ClientList &msg)
 
 void RaftServer::receive(ClientAppend &msg)
 {
-    if (!started || crashed)
+    if (crashed)
     {
         return;
     }
@@ -156,7 +156,7 @@ void RaftServer::receive(ClientAppend &msg)
 
 void RaftServer::receive(ClientDelete &msg)
 {
-    if (!started || crashed)
+    if (crashed)
     {
         return;
     }

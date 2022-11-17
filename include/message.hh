@@ -69,8 +69,6 @@ public:
     int target_rank;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Message, type, sender_rank, target_rank)
-
 class ClientMessage : public Message
 {
 public:
@@ -79,7 +77,7 @@ public:
     ClientMessage(MessageType type, int target_rank, int sender_rank)
         : Message(type, target_rank, sender_rank){};
     
-    virtual std::string serialize() const override;
+    //virtual std::string serialize() const override;
 
     virtual void call_execute(Processus &process) = 0;
 };

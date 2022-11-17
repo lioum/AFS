@@ -86,12 +86,12 @@ void ClientDelete::call_execute(Processus &process)
     process.execute(*this);
 }
 
-std::string ClientMessage::serialize() const
+/*std::string ClientMessage::serialize() const
 {
     json j = *this;
 
     return j.dump();
-}
+}*/
 
 std::string ReplCrash::serialize() const
 {
