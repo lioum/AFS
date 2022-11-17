@@ -186,8 +186,7 @@ std::string ClientDelete::serialize() const
 
 std::unique_ptr<Message> Message::deserialize(const json &j)
 {
-    auto msg_type = j["type"].get<MessageType>();
-
+    MessageType msg_type = j["type"].get<MessageType>();
     switch (msg_type)
     {
     case MessageType::REPL_CRASH:
