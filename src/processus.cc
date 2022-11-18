@@ -94,9 +94,11 @@ InternProcessus::InternProcessus(MPI_Comm com, int nb_servers,
     , started(false)
     , speed(Speed::FAST)
 {
+    int speed_val = as_integer(speed);
+    sleeping_time = speed_val * speed_val * std::chrono::milliseconds(1000);
+
     working_folder_path += root_folder_path;
     working_folder_path += std::to_string(uid);
-
     if (!std::filesystem::exists(working_folder_path))
         std::filesystem::create_directory(working_folder_path);
 }
@@ -114,6 +116,8 @@ void InternProcessus::receive(ReplSpeed &msg)
               << as_integer(speed) << " to " << as_integer(msg.speed)
               << std::endl;
     speed = msg.speed;
+    int speed_val = as_integer(speed);
+    sleeping_time = speed_val * speed_val * std::chrono::milliseconds(1000);
     send(HandshakeSuccess(msg.sender_rank, uid));
 }
 

@@ -92,14 +92,14 @@ class LogEntry
 {
 public:
     LogEntry() = default;
-    LogEntry(unsigned int term, std::string command, unsigned int client_id)
+    LogEntry(int term, std::string command, int client_id)
         : term(term), command(command), client_id(client_id)
     {}
 
-    unsigned int term;
+    int term;
     std::string command;
-    unsigned int client_id;
-    //unsigned int command_uid;
+    int client_id;
+    //int command_uid;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LogEntry, term, command, client_id)
@@ -110,7 +110,7 @@ public:
     ReplCrash()
         : Message(MessageType::REPL_CRASH)
     {}
-    ReplCrash(unsigned int target_rank, unsigned int sender_rank)
+    ReplCrash(int target_rank, int sender_rank)
         : Message(MessageType::REPL_CRASH, target_rank, sender_rank)
     {}
 
@@ -136,7 +136,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplStart, type, sender_rank, target_rank)
 
 enum class Speed
 {
-    FAST = 0,
+    FAST = 2,
     MEDIUM,
     LOW,
 };
@@ -180,7 +180,7 @@ public:
 
     void accept(Processus &process) override;
 
-    unsigned int term;
+    int term;
 };
 
 class RpcRequestVote : public RpcMessage
@@ -189,8 +189,8 @@ public:
     RpcRequestVote()
         : RpcMessage(MessageType::RPC_REQUEST_VOTE){};
     RpcRequestVote(int target_rank, int sender_rank, int term, 
-                   unsigned int candidate_uid, unsigned int last_log_index, 
-                   unsigned int last_log_term)
+                   int candidate_uid, int last_log_index, 
+                   int last_log_term)
         : RpcMessage(MessageType::RPC_REQUEST_VOTE, target_rank, sender_rank, term)
         , candidate_uid(candidate_uid)
         , last_log_index(last_log_index)
@@ -201,9 +201,9 @@ public:
     virtual std::string serialize() const override;
     void accept(Processus &process) override;
 
-    unsigned int candidate_uid;
-    unsigned int last_log_index;
-    unsigned int last_log_term;
+    int candidate_uid;
+    int last_log_index;
+    int last_log_term;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcRequestVote, type, sender_rank,
@@ -216,10 +216,10 @@ public:
     RpcAppendEntries()
         : RpcMessage(MessageType::RPC_APPEND_ENTRIES){};
     RpcAppendEntries(int target_rank, int sender_rank, int term, 
-                        int leader_uid, unsigned int prev_log_index,
-                        unsigned int prev_log_term, 
+                        int leader_uid, int prev_log_index,
+                        int prev_log_term, 
                         std::vector<LogEntry> entries,
-                        unsigned int leader_commit)
+                        int leader_commit)
         : RpcMessage(MessageType::RPC_APPEND_ENTRIES, target_rank, 
                         sender_rank, term)
         , leader_uid(leader_uid)
@@ -233,10 +233,10 @@ public:
     void accept(Processus &process) override;
 
     int leader_uid;
-    unsigned int prev_log_index;
-    unsigned int prev_log_term;
+    int prev_log_index;
+    int prev_log_term;
     std::vector<LogEntry> entries;
-    unsigned int leader_commit;
+    int leader_commit;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcAppendEntries, type, sender_rank,

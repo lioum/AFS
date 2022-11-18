@@ -6,7 +6,6 @@
 #include "processus.hh"
 
 using chrono_time = std::chrono::time_point<std::chrono::system_clock>;
-using std::chrono::milliseconds;
 using namespace std::chrono_literals;
 
 enum class Role
@@ -60,25 +59,25 @@ protected:
     std::vector<LogEntry> entries;
 
     // Election
-    milliseconds election_timeout;
+    nanoseconds election_timeout;
     chrono_time last_checked;
-    unsigned int leader_uid;
+    int leader_uid;
     int vote_count;
 
     // Persistant state
-    unsigned int current_term;
+    int current_term;
     int voted_for;
 
     // Volatile state
-    unsigned int commit_index;
-    unsigned int last_applied;
+    int commit_index;
+    int last_applied;
 
     // Volatile leader state
-    std::vector<unsigned int> next_index;
-    std::vector<unsigned int> match_index;
+    std::vector<int> next_index;
+    std::vector<int> match_index;
 
     // Fixed heartbeat timeout fitting the raft election timeout
-    constexpr static milliseconds heartbeat = 30ms;
-    milliseconds heartbeat_timeout;
+    constexpr static nanoseconds heartbeat = 30ms;
+    nanoseconds heartbeat_timeout;
     chrono_time last_heartbeat;
 };

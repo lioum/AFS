@@ -9,6 +9,10 @@
 
 #include "message.hh"
 
+using std::chrono::milliseconds;
+using std::chrono::microseconds;
+using std::chrono::nanoseconds;
+
 class Processus
 {
 public:
@@ -64,6 +68,7 @@ protected:
     bool crashed;
     bool started;
     Speed speed;
+    nanoseconds sleeping_time;
 
     std::filesystem::path working_folder_path;
 };

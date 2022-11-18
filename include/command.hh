@@ -19,7 +19,7 @@ public:
 
     void call_execute(InternProcessus &) override;
     
-    std::variant<std::string, unsigned int> uid;
+    std::variant<std::string, int> uid;
 };
 
 class List: public Command {

@@ -16,7 +16,6 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
         : command_file_path;
 
     std::ifstream file(command_file_real_path);
-    std::cout << "Reading command file " << command_file_real_path << std::endl;
 
     if (!file)
         throw std::runtime_error("Could not open command file");
