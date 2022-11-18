@@ -23,5 +23,5 @@ private:
 
     std::chrono::milliseconds handshake_timeout = std::chrono::milliseconds(1000);
     std::chrono::milliseconds handshake_timeout_till = std::chrono::milliseconds(0);
-    std::vector<std::shared_ptr<ClientMessage>> messages;
+    std::vector<std::shared_ptr<ClientRequest>> messages;
 };

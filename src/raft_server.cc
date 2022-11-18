@@ -327,7 +327,7 @@ void RaftServer::receive(ClientLoad &msg)
       return;
   std::cout << "RaftServer(" << uid << ") is loading file " << msg.filename
             << std::endl;
-  entries.push_back(LogEntry(current_term, msg.sender_rank));
+  entries.push_back(LogEntry(current_term, msg.serialize(), msg.sender_rank));
 }
 
 void RaftServer::receive(ClientList &msg)
@@ -337,7 +337,7 @@ void RaftServer::receive(ClientList &msg)
 
   std::cout << "RaftServer(" << uid << ") is going to list all files"
             << std::endl;
-  entries.push_back(LogEntry(current_term, msg.));
+  entries.push_back(LogEntry(current_term, msg.serialize(), msg.sender_rank));
 }
 
 void RaftServer::receive(ClientAppend &msg)
@@ -347,7 +347,7 @@ void RaftServer::receive(ClientAppend &msg)
 
   std::cout << "RaftServer(" << uid << ") is adding " << msg.content
             << " to file with uid " << msg.uid << std::endl;
-  entries.push_back(LogEntry(current_term, msg.));
+  entries.push_back(LogEntry(current_term, msg.serialize(), msg.sender_rank));
 }
 
 void RaftServer::receive(ClientDelete &msg)
@@ -357,7 +357,7 @@ void RaftServer::receive(ClientDelete &msg)
 
   std::cout << "RaftServer(" << uid << ") is deleting file with uid "
             << msg.uid << std::endl;
-  entries.push_back(LogEntry(current_term, std::make_shared<ClientDelete>(msg)));
+  entries.push_back(LogEntry(current_term, msg.serialize(), msg.sender_rank));
 }
 
 void RaftServer::execute(ClientLoad &msg)

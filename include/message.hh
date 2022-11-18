@@ -88,6 +88,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientRequest, type, sender_rank, target_rank
 class LogEntry
 {
 public:
+    LogEntry() = default;
     LogEntry(unsigned int term, std::string command, unsigned int client_id)
         : term(term), command(command), client_id(client_id)
     {}
