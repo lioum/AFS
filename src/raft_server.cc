@@ -39,6 +39,11 @@ RaftServer::RaftServer(MPI_Comm com, int nb_servers,
     vote_count = 0;
 }
 
+void RaftServer::work()
+{
+    apply_server_rules();
+}
+
 void RaftServer::apply_server_rules()
 {
     if (role == Role::LEADER)
@@ -53,9 +58,14 @@ void RaftServer::start_election()
     vote_count = 0;
     current_term++;
     voted_for = uid;
+    std::cout << "before rcp request vote in raft_server.cc" << std::endl;
+    std::cout << "last applied: " << last_applied << std::endl;
+    std::cout << "entries size: " << entries.size() << std::endl;
     auto request = RpcRequestVote(-1, uid, current_term, uid,
                                   last_applied, entries[last_applied].term);
+    std::cout << "after rcp request vote in raft_server.cc" << std::endl;
     broadcast_to_servers(request);
+    std::cout << "after broadcast in raft_server.cc" << std::endl;
     election_timeout = random_election_timeout();
 }
 
@@ -190,6 +200,8 @@ void RaftServer::receive(RpcRequestVote &msg)
 {
   if (crashed)
       return;
+    
+  std::cout << "Receive(" << uid << "): RpcRequestVote" << std::endl;
 
   // if receive requestVote from candidate
   // respond to requestVote with voteResponse

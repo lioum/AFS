@@ -123,3 +123,9 @@ void InternProcessus::receive(ReplStart &msg)
     started = true;
     send(HandshakeSuccess(msg.sender_rank, uid));
 }
+
+void InternProcessus::receive(RpcMessage &msg)
+{
+    std::cout << "Processus(" << uid << ") is starting" << std::endl;
+    send(HandshakeSuccess(msg.sender_rank, uid));
+}

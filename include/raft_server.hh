@@ -23,7 +23,7 @@ public:
 
     void work() override;
 
-    using InternProcessus::receive;
+    // using InternProcessus::receive;
     void receive(RpcMessage &msg) override;
     void receive(RpcRequestVote &msg) override;
     void receive(RpcAppendEntries &msg) override;

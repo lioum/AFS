@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <memory>
+#include <iostream>
 
 #include "nlohmann/json.hpp"
+#include "command.hh"
 
 using json = nlohmann::json;
 
@@ -56,7 +58,8 @@ public:
     Message(MessageType type, int target_rank, int sender_rank)
         : type(type)
         , sender_rank(sender_rank)
-        , target_rank(target_rank){};
+        , target_rank(target_rank){
+        };
     virtual ~Message() = default;
 
     virtual void accept(Processus &process) = 0;
@@ -167,11 +170,13 @@ class RpcMessage : public Message
 {
 public:
     RpcMessage(MessageType type)
-        : Message(type){};
+        : Message(type){
+        };
     RpcMessage(MessageType type, int target_rank, int sender_rank, int term)
         : Message(type, target_rank, sender_rank)
         , term(term)
-    {}
+    {
+    }
 
     void accept(Processus &process) override;
 
@@ -190,7 +195,8 @@ public:
         , candidate_uid(candidate_uid)
         , last_log_index(last_log_index)
         , last_log_term(last_log_term)
-    {}
+    {
+    }
 
     virtual std::string serialize() const override;
     void accept(Processus &process) override;
