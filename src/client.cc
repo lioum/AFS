@@ -20,10 +20,11 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
     if (!file)
         throw std::runtime_error("Could not open command file");
 
-    auto &messages = client.messages;
+    auto &messages = client.commands;
     auto target_rank = client.target_rank;
     int sender_rank = client.uid;
 
+    // Parsing of the current command file that we previously receive or decided to get all the commands
     std::string line;
 
     while (std::getline(file, line))
@@ -42,10 +43,10 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
                 throw std::runtime_error("Failed to parse command file: " + command_file_real_path.string());
             }
             std::string filename = inline_words[1];
+
             // Read file content to content
             std::string content = readFileIntoString(filename);
-            messages.push_back(std::make_shared<ClientLoad>(
-                target_rank, sender_rank, filename, content));
+            messages.push_back(std::make_unique<Load>(sender_rank, filename, content));
         }
         else if (inline_words[0] == "LIST")
         {
@@ -56,7 +57,7 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
                 throw std::runtime_error("Failed to parse command file: " + command_file_real_path.string());
             }
             messages.push_back(
-                std::make_shared<ClientList>(target_rank, sender_rank));
+                std::make_unique<List>(target_rank));
         }
         else if (inline_words[0] == "APPEND")
         {
@@ -77,8 +78,7 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
             {
                 std::cerr << e.what() << '\n';
             }
-            messages.push_back(std::make_shared<ClientAppend>(
-                target_rank, sender_rank, uid_file, inline_words[2]));
+            messages.push_back(std::make_unique<Append>(sender_rank, uid_file, inline_words[2]));
         }
         else if (inline_words[0] == "DELETE")
         {
@@ -100,8 +100,7 @@ Client Client::FromCommandFile(const std::filesystem::path &command_file_path,
             }
             
 
-            messages.push_back(std::make_shared<ClientDelete>(
-                target_rank, sender_rank, uid_file));
+            messages.push_back(std::make_unique<Delete>(sender_rank, uid_file));
         }
     }
 
@@ -116,6 +115,7 @@ Client::Client(MPI_Comm com, int nb_servers,
 
 void Client::work()
 {
+    // we check if the client is still available
     if (!started || crashed)
     {
         return;
@@ -130,13 +130,20 @@ void Client::work()
         std::cout << "Client " << uid
                   << " timed out waiting for handshake from server "
                   << target_rank << std::endl;
-        broadcast_to_servers(*messages[messages_index]);
+        const auto &cmd = commands.at(messages_index);
+        ClientRequest request(-1, uid, cmd);
+
+        broadcast_to_servers(request);
         waiting_for_handshake = true;
     }
-    
+
+    // Client ready to send a message 
     if (!waiting_for_handshake)
     {
-        send(*messages[messages_index]);
+        const auto &cmd = commands.at(messages_index);
+        ClientRequest request(-1, uid, cmd);
+
+        send(request);
         waiting_for_handshake = true;
         handshake_timeout_till = now + handshake_timeout;
     }
@@ -149,10 +156,13 @@ void Client::work()
 
 void Client::receive(HandshakeFailure &msg)
 {
+    // we check if the client is still available
     if (!started || crashed)
     {
         return;
     }
+
+    // we check if the client is waiting for a message
     if (waiting_for_handshake)
     {
         std::cout << "Client " << uid << " received handshake failure from server "
@@ -163,10 +173,13 @@ void Client::receive(HandshakeFailure &msg)
 
 void Client::receive(HandshakeSuccess &msg)
 {
+    // we check if the client is still available
     if (!started || crashed)
     {
         return;
     }
+
+    // we check if the client is waiting for a message
     if (waiting_for_handshake)
     {
         std::cout << "Client " << uid

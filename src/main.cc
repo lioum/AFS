@@ -8,6 +8,7 @@ int main (int argc, char *argv[])
 {
     int rank, size;
 
+    //Initialization
     MPI_Init(&argc, &argv);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -16,10 +17,12 @@ int main (int argc, char *argv[])
     if (argc < 3 && rank == 0) 
         std::cout << "Use run.sh script." << std::endl;
 
+    //Retrieve the parameters for the processus
     int nb_servers = std::stoi(argv[1]);
     int nb_clients = std::stoi(argv[2]);
     nb_clients = nb_clients;
 
+    //Start the processus
     if (rank == 0)
     {
         //std::cout << rank << ": I'm the REPL" << std::endl;

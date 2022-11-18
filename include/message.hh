@@ -12,6 +12,9 @@ using json = nlohmann::json;
 class Processus;
 class InternProcessus;
 
+/*
+** enum of possible message accepted
+*/
 enum class MessageType
 {
     REPL_CRASH = 0,
@@ -23,12 +26,12 @@ enum class MessageType
     RPC_APPEND_ENTRIES_RESPONSE,
     HANDSHAKE_FAILURE,
     HANDSHAKE_SUCCESS,
-    CLIENT_LOAD,
-    CLIENT_LIST,
-    CLIENT_APPEND,
-    CLIENT_DELETE,
+    CLIENT_REQUEST
 };
 
+/*
+** Association between the previous enum and the json file data
+*/
 NLOHMANN_JSON_SERIALIZE_ENUM(
     MessageType,
     {
@@ -42,19 +45,35 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
           "RPC_APPEND_ENTRIES_RESPONSE" },
         { MessageType::HANDSHAKE_FAILURE, "HANDSHAKE_FAILURE" },
         { MessageType::HANDSHAKE_SUCCESS, "HANDSHAKE_SUCCESS" },
-        { MessageType::CLIENT_LOAD, "CLIENT_LOAD" },
-        { MessageType::CLIENT_LIST, "CLIENT_LIST" },
-        { MessageType::CLIENT_APPEND, "CLIENT_APPEND" },
-        { MessageType::CLIENT_DELETE, "CLIENT_DELETE" },
+        { MessageType::CLIENT_REQUEST, "CLIENT_REQUEST" }
     })
 
+/*
+** Class Message
+**
+** Specification about a message accepted between servers and clients
+*/
 class Message
 {
 public:
+
+    /*
+    ** Constructor
+    **
+    ** @MessageType type : Specify the type of message
+    */
     Message(MessageType type)
         : type(type)
         , sender_rank(-1)
         , target_rank(-1){};
+
+    /*
+    ** Constructor
+    **
+    ** @MessageType type : Specify the type of message
+    ** @int target_rank : Specify the receiver Id
+    ** @int sender_rank : Specify the sender Id
+    */
     Message(MessageType type, int target_rank, int sender_rank)
         : type(type)
         , sender_rank(sender_rank)
@@ -62,9 +81,25 @@ public:
         };
     virtual ~Message() = default;
 
+    /*
+    ** accept Function
+    **
+    **  @Processus &process : the reference to the processus that will receive the message
+    */
     virtual void accept(Processus &process) = 0;
+
+    /*
+    ** serialize Function
+    **
+    ** Tranform the message into json and dump it
+    */
     virtual std::string serialize() const = 0;
 
+    /*
+    ** deserialize Function
+    **
+    ** Parse a json data to identify a message
+    */
     static std::unique_ptr<Message> deserialize(const json &msg);
 
     MessageType type;
@@ -72,38 +107,48 @@ public:
     int target_rank;
 };
 
+/*
+**  Class ClientRequest
+**
+**  A specific message of type CLIENT_REQUEST
+*/
 class ClientRequest : public Message
 {
 public:
-    ClientRequest(MessageType type)
-        : Message(type){};
-    ClientRequest(MessageType type, int target_rank, int sender_rank)
-        : Message(type, target_rank, sender_rank){};
+    ClientRequest()
+        : Message(MessageType::CLIENT_REQUEST)
+        , command(nullptr)
+    {};
+
+    ClientRequest(int target_rank, int sender_rank, const std::shared_ptr<Command> &cmd)
+        : Message(MessageType::CLIENT_REQUEST, target_rank, sender_rank), command(cmd){};
     
-    //virtual std::string serialize() const override;
+    virtual std::string serialize() const override;
     virtual void accept(Processus &process) override;
 
-    virtual void call_execute(InternProcessus &process) = 0;
+    std::shared_ptr<Command> command;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientRequest, type, sender_rank, target_rank)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientRequest, type, sender_rank, target_rank, command)
 
 class LogEntry
 {
 public:
     LogEntry() = default;
-    LogEntry(int term, std::string command, int client_id)
-        : term(term), command(command), client_id(client_id)
-    {}
+    LogEntry(int term, const std::shared_ptr<Command> &cmd)
+        : term(term), command(cmd){};
 
     int term;
-    std::string command;
-    int client_id;
-    //int command_uid;
+    std::shared_ptr<Command> command;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LogEntry, term, command, client_id)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LogEntry, term, command)
 
+/*
+**  Class ReplCrash
+**
+**  A specific message of type REPL_CRASH
+*/
 class ReplCrash : public Message
 {
 public:
@@ -120,6 +165,11 @@ public:
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplCrash, type, sender_rank, target_rank)
 
+/*
+**  Class ReplStart
+**
+**  A specific message of type REPL_START
+*/
 class ReplStart : public Message
 {
 public:
@@ -134,6 +184,9 @@ public:
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplStart, type, sender_rank, target_rank)
 
+/*
+** Enum of accepted Speed for a ReplSpeed message
+*/
 enum class Speed
 {
     FAST = 2,
@@ -148,6 +201,11 @@ NLOHMANN_JSON_SERIALIZE_ENUM(Speed,
                                  { Speed::LOW, "LOW" },
                              })
 
+/*
+**  Class ReplSpeed
+**
+**  A specific message of type ReplSpeed that can take 3 different speed (FAST, MEDIUM, LOW)
+*/
 class ReplSpeed : public Message
 {
 public:
@@ -166,6 +224,11 @@ public:
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplSpeed, type, sender_rank,
                                     target_rank, speed)
 
+/*
+**  Class RpcMessage
+**
+**  A specific message of type RPC_MESSAGE
+*/
 class RpcMessage : public Message
 {
 public:
@@ -183,6 +246,11 @@ public:
     int term;
 };
 
+/*
+**  Class RpcRequestVote
+**
+**  A specific message of type RPC_REQUEST_VOTE
+*/
 class RpcRequestVote : public RpcMessage
 {
 public:
@@ -210,6 +278,11 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcRequestVote, type, sender_rank,
                                    target_rank, term, last_log_index,
                                    last_log_term)
 
+/*
+**  Class RpcAppendEntries
+**
+**  A specific message of type RPC_APPEND_ENTRIES
+*/
 class RpcAppendEntries : public RpcMessage
 {
 public:
@@ -243,6 +316,11 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcAppendEntries, type, sender_rank,
                                 target_rank, term, leader_uid, prev_log_index,
                                 prev_log_term, entries, leader_commit)
 
+/*
+**  Class RpcVoteResponse
+**
+**  A specific message of type RPC_VOTE_RESPONSE
+*/
 class RpcVoteResponse : public RpcMessage
 {
 public:
@@ -263,6 +341,11 @@ public:
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcVoteResponse, type, sender_rank,
                                    target_rank, term, vote_granted)
 
+/*
+**  Class RpcAppendEntriesResponse
+**
+**  A specific message of type RPC_APPEND_ENTRIES_RESPONSE
+*/
 class RpcAppendEntriesResponse : public RpcMessage
 {
 public:
@@ -284,6 +367,11 @@ public:
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcAppendEntriesResponse, type,
                                 sender_rank, target_rank, term, success)
 
+/*
+**  Class HandshakeFailure
+**
+**  A specific message of type HANDSHAKE_FAILURE
+*/
 class HandshakeFailure : public Message
 {
 public:
@@ -305,6 +393,11 @@ public:
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HandshakeFailure, type, sender_rank,
                                    target_rank, data)
 
+/*
+**  Class HandshakeSuccess
+**
+**  A specific message of type HANDSHAKE_SUCCESS
+*/
 class HandshakeSuccess : public Message
 {
 public:
@@ -325,81 +418,3 @@ public:
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HandshakeSuccess, type, sender_rank,
                                    target_rank, data)
-
-class ClientLoad : public ClientRequest
-{
-public:
-    ClientLoad()
-        : ClientRequest(MessageType::CLIENT_LOAD){};
-    ClientLoad(int target_rank, int sender_rank, const std::string &filename,
-               const std::string &content)
-        : ClientRequest(MessageType::CLIENT_LOAD, target_rank, sender_rank)
-        , filename(filename)
-        , content(content){};
-
-    virtual std::string serialize() const override;
-    void accept(Processus &process) override;
-    void call_execute(InternProcessus &process) override;
-
-    std::string filename;
-    std::string content;
-};
-
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientLoad, type, sender_rank, target_rank,
-                                   filename, content)
-
-class ClientList : public ClientRequest
-{
-public:
-    ClientList()
-        : ClientRequest(MessageType::CLIENT_LIST){};
-    ClientList(int target_rank, int sender_rank)
-        : ClientRequest(MessageType::CLIENT_LIST, target_rank, sender_rank){};
-
-    virtual std::string serialize() const override;
-    void accept(Processus &process) override;
-    void call_execute(InternProcessus &process) override;
-};
-
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientList, type, sender_rank, target_rank)
-
-class ClientAppend : public ClientRequest
-{
-public:
-    ClientAppend()
-        : ClientRequest(MessageType::CLIENT_APPEND){};
-    ClientAppend(int target_rank, int sender_rank, int uid,
-                 const std::string &content)
-        : ClientRequest(MessageType::CLIENT_APPEND, target_rank, sender_rank)
-        , content(content)
-        , uid(uid){};
-
-    virtual std::string serialize() const override;
-    void accept(Processus &process) override;
-    void call_execute(InternProcessus &process) override;
-
-    std::string content;
-    int uid;
-};
-
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientAppend, type, sender_rank, target_rank,
-                                   content, uid)
-
-class ClientDelete : public ClientRequest
-{
-public:
-    ClientDelete()
-        : ClientRequest(MessageType::CLIENT_DELETE){};
-    ClientDelete(int target_rank, int sender_rank, int uid)
-        : ClientRequest(MessageType::CLIENT_DELETE, target_rank, sender_rank)
-        , uid(uid){};
-
-    virtual std::string serialize() const override;
-    void accept(Processus &process) override;
-    void call_execute(InternProcessus &process) override;
-
-    int uid;
-};
-
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientDelete, type, sender_rank, target_rank,
-                                   uid)

@@ -363,46 +363,43 @@ void RaftServer::receive(HandshakeSuccess &)
         return;
 }
 
-void RaftServer::receive(ClientLoad &msg)
-{
-    if (crashed)
-        return;
-    std::cout << "RaftServer(" << uid << ") is loading file " << msg.filename
-              << std::endl;
-    entries.push_back(LogEntry(current_term, msg.serialize(), msg.sender_rank));
-}
+// void RaftServer::receive(ClientLoad &msg)
+// {
+//   if (crashed)
+//       return;
+//   std::cout << "RaftServer(" << uid << ") is loading file " << msg.filename
+//             << std::endl;
+//   entries.push_back(LogEntry(current_term, msg.serialize(), msg.sender_rank));
+// }
 
-void RaftServer::receive(ClientList &msg)
-{
-    if (crashed)
-        return;
+// void RaftServer::receive(ClientList &msg)
+// {
+//   if (crashed)
+//       return;
 
-    std::cout << "RaftServer(" << uid << ") is going to list all files"
-              << std::endl;
-    entries.push_back(LogEntry(current_term, msg.serialize(), msg.sender_rank));
-}
+//   std::cout << "RaftServer(" << uid << ") is going to list all files"
+//             << std::endl;
+//   entries.push_back(LogEntry(current_term, msg.serialize(), msg.sender_rank));
+// }
 
-void RaftServer::receive(ClientAppend &msg)
-{
-    if (crashed)
-        return;
+// void RaftServer::receive(ClientAppend &msg)
+// {
+//   if (crashed)
+//       return;
 
-    std::cout << "RaftServer(" << uid << ") is adding " << msg.content
-              << " to file with uid " << msg.uid << std::endl;
-    entries.push_back(LogEntry(current_term, msg.serialize(), msg.sender_rank));
-}
+//   std::cout << "RaftServer(" << uid << ") is adding " << msg.content
+//             << " to file with uid " << msg.uid << std::endl;
+//   entries.push_back(LogEntry(current_term, msg.serialize(), msg.sender_rank));
+// }
 
-void RaftServer::receive(ClientDelete &msg)
-{
-    if (crashed)
-        return;
+// void RaftServer::receive(ClientDelete &msg)
+// {
+//   if (crashed)
+//       return;
 
-    std::cout << "RaftServer(" << uid << ") is deleting file with uid "
-              << msg.uid << std::endl;
-    entries.push_back(LogEntry(current_term, msg.serialize(), msg.sender_rank));
-}
+// }
 
-void RaftServer::execute(ClientLoad &msg)
+void RaftServer::execute(Load &msg)
 {
     std::string filename = working_folder_path / msg.filename;
 
@@ -420,12 +417,12 @@ void RaftServer::execute(ClientLoad &msg)
     }
     uids[uid] = filename;
 
-    json custom_data;
-    custom_data["UID"] = uid;
-    send(HandshakeSuccess(msg.sender_rank, uid, custom_data));
+  json custom_data;
+  custom_data["UID"] = uid;
+  send(HandshakeSuccess(msg.client_uid, uid, custom_data));
 }
 
-void RaftServer::execute(ClientList &msg)
+void RaftServer::execute(List &msg)
 {
     std::vector<int> list_uids;
     for (const auto &key_value : uids)
@@ -433,12 +430,17 @@ void RaftServer::execute(ClientList &msg)
         list_uids.push_back(key_value.first);
     }
 
-    json custom_data;
-    custom_data["UIDS"] = list_uids;
-    send(HandshakeSuccess(msg.sender_rank, uid, custom_data));
+  json custom_data;
+  custom_data["UIDS"] = list_uids;
+
+  std::cout << "RaftServer(" << uid << ") is going to list all files"
+            << std::endl;
+  //entries.push_back(LogEntry(current_term, msg));
+
+  send(HandshakeSuccess(msg.client_uid, uid, custom_data));
 }
 
-void RaftServer::execute(ClientAppend &msg)
+void RaftServer::execute(Append &msg)
 {
     MPI_File file;
     MPI_File_open(MPI_COMM_SELF, uids[msg.uid].c_str(), MPI_MODE_APPEND,
@@ -447,11 +449,24 @@ void RaftServer::execute(ClientAppend &msg)
                    MPI_STATUS_IGNORE);
     MPI_File_close(&file);
 
-    send(HandshakeSuccess(msg.sender_rank, uid));
+  std::cout << "RaftServer(" << uid << ") is adding " << msg.content
+            << " to file with uid " << msg.uid << std::endl;
+  // entries.push_back(LogEntry(current_term, std::make_shared<Append>(msg)));
+
+  send(HandshakeSuccess(msg.client_uid, uid));
 }
 
-void RaftServer::execute(ClientDelete &msg)
+void RaftServer::execute(Delete &msg)
 {
-    MPI_File_delete(uids[msg.uid].c_str(), MPI_INFO_NULL);
-    uids.erase(msg.uid);
+  MPI_File_delete(uids[msg.uid].c_str(), MPI_INFO_NULL);
+  uids.erase(msg.uid);
+
+  std::cout << "RaftServer(" << uid << ") is deleting file with uid "
+            << msg.uid << std::endl;
+  // entries.push_back(LogEntry(current_term, msg));
+}
+
+void RaftServer::execute(ClientDelete &)
+{
+    throw std::runtime_error("RaftServer::execute(ClientDelete &) Not implemented");
 }

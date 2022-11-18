@@ -1,5 +1,13 @@
 #include "utils.hh"
 
+/*
+** split_words Function
+**
+** @std::string const &str : string to be splited
+** @const char delim : delimiter
+**
+** A simple split following a given delimiter
+*/
 std::vector<std::string> split_words(std::string const &str, const char delim)
 {
     std::vector<std::string> inline_words;
@@ -13,6 +21,14 @@ std::vector<std::string> split_words(std::string const &str, const char delim)
     return inline_words;
 }
 
+/*
+** chars_to_stream Function
+**
+** @char* buffer : data to be converted
+** @int size : size of the buffer
+**
+** Convert a given buffer into a stringstream
+*/
 std::stringstream chars_to_stream(char *buffer, int size)
 {
     std::stringstream ss("");
@@ -27,6 +43,13 @@ std::stringstream chars_to_stream(char *buffer, int size)
     return ss;
 }
 
+/*
+** readFileIntoString Function
+**
+** @std::string &path : file to be readed
+**
+** Read a file and convert it to string
+*/
 std::string readFileIntoString(const std::string &path)
 {
     std::ifstream input_file(path);

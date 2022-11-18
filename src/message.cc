@@ -61,50 +61,6 @@ void ClientRequest::accept(Processus &process)
     process.receive(*this);
 }
 
-void ClientLoad::accept(Processus &process)
-{
-    ClientRequest::accept(process);
-    process.receive(*this);
-}
-
-void ClientLoad::call_execute(InternProcessus &process) 
-{
-    process.execute(*this);
-}
-
-void ClientList::accept(Processus &process)
-{
-    ClientRequest::accept(process);
-    process.receive(*this);
-}
-
-void ClientList::call_execute(InternProcessus &process) 
-{
-    process.execute(*this);
-}
-
-void ClientAppend::accept(Processus &process)
-{
-    ClientRequest::accept(process);
-    process.receive(*this);
-}
-
-void ClientAppend::call_execute(InternProcessus &process) 
-{
-    process.execute(*this);
-}
-
-void ClientDelete::accept(Processus &process)
-{
-    ClientRequest::accept(process);
-    process.receive(*this);
-}
-
-void ClientDelete::call_execute(InternProcessus &process) 
-{
-    process.execute(*this);
-}
-
 std::string ReplCrash::serialize() const
 {
     json j = *this;
@@ -168,28 +124,7 @@ std::string HandshakeSuccess::serialize() const
     return j.dump();
 }
 
-std::string ClientLoad::serialize() const
-{
-    json j = *this;
-    
-    return j.dump();
-}
-
-std::string ClientList::serialize() const
-{
-    json j = *this;
-    
-    return j.dump();
-}
-
-std::string ClientAppend::serialize() const
-{
-    json j = *this;
-    
-    return j.dump();
-}
-
-std::string ClientDelete::serialize() const
+std::string ClientRequest::serialize() const
 {
     json j = *this;
     
@@ -220,14 +155,8 @@ std::unique_ptr<Message> Message::deserialize(const json &j)
         return std::make_unique<HandshakeFailure>(j.get<HandshakeFailure>());
     case MessageType::HANDSHAKE_SUCCESS:
         return std::make_unique<HandshakeSuccess>(j.get<HandshakeSuccess>());
-    case MessageType::CLIENT_LOAD:
-        return std::make_unique<ClientLoad>(j.get<ClientLoad>());
-    case MessageType::CLIENT_LIST:
-        return std::make_unique<ClientList>(j.get<ClientList>());
-    case MessageType::CLIENT_APPEND:
-        return std::make_unique<ClientAppend>(j.get<ClientAppend>());
-    case MessageType::CLIENT_DELETE:
-        return std::make_unique<ClientDelete>(j.get<ClientDelete>());
+    case MessageType::CLIENT_REQUEST:
+        return std::make_unique<ClientRequest>(j.get<ClientRequest>());
     }
     return nullptr;
 }

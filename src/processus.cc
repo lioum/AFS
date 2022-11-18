@@ -23,9 +23,11 @@ std::shared_ptr<Message> Processus::listen()
     if (!flag)
         return nullptr;
 
+    // Get the size of the top element of the source
     int count = 0;
     MPI_Get_count(&status, MPI_CHAR, &count);
 
+    // Receiving the listened message from the json in a buffer
     auto buffer = std::vector<char>(count);
     int err =
         MPI_Recv(buffer.data(), count, MPI_CHAR, source, tag, com, &status);
