@@ -137,7 +137,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClientRequest, type, sender_rank, target_rank
 class LogEntry
 {
 public:
-    LogEntry() = default;
+    LogEntry(): term(-1), command(nullptr){};
     LogEntry(int term, const std::shared_ptr<Command> &cmd)
         : term(term), command(cmd){};
 
@@ -304,7 +304,7 @@ public:
         , prev_log_term(prev_log_term)
         , entries(entries)
         , leader_commit(leader_commit)
-    {}
+    {std::cout << "RpcAppendEntries creation..." << std::endl;}
 
     virtual std::string serialize() const override;
     void accept(Processus &process) override;
