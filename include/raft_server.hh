@@ -34,9 +34,10 @@ public:
     ** @int nb_servers : the number of servers
     ** @std::filesystem::path &folder_path : the reference to the folder of the processus
     */
-    RaftServer(MPI_Comm com, int nb_servers, const std::filesystem::path& folder_path);
+    RaftServer(MPI_Comm com, int nb_servers, const std::filesystem::path& root_folder_path);
 
     void work() override;
+    void broadcast_append_entries(RpcAppendEntries &msg);
 
     void receive(RpcMessage &msg) override;
     void receive(RpcRequestVote &msg) override;
@@ -53,7 +54,6 @@ public:
     virtual void execute(Load &) override;
     virtual void execute(Append &) override;
     virtual void execute(List &) override;
-    virtual void execute(ClientDelete &) override;
 
     /*
     ** start_election Function
@@ -100,6 +100,8 @@ private:
 protected:
     int get_last_log_index();
     int get_last_log_term();
+    int get_prev_log_index(int rank);
+    int get_prev_log_term(int rank);
     
     Role role;
 

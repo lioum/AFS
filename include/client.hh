@@ -2,6 +2,7 @@
 
 #include "processus.hh"
 
+#include <fstream>
 /*
 ** Class Client
 **
@@ -11,30 +12,19 @@
 class Client : public InternProcessus
 {
 public:
-
     /*
     ** Constructor
     **
-    ** @MPI_Comm com : the communicator provided by MPI that contains all MPI processes
+    ** @MPI_Comm com : the communicator provided by MPI that contains all MPI
+    *processes
     ** @int nb_servers : the number of servers
-    ** @std::filesystem::path &working_path : the reference the current working environment for the processus
+    ** @std::filesystem::path &working_path : the reference the current working
+    *environment for the processus
     */
     Client(MPI_Comm com, int nb_servers,
-           const std::filesystem::path &working_path);
+           const std::filesystem::path &root_folder_path,
+           const std::filesystem::path &command_file_path);
     ~Client(){};
-
-    /*
-    ** FromCommandFile Function
-    **
-    ** @std::filesystem::path &command_file_path : the reference to the command file
-    ** @MPI_Comm com : the communicator provided by MPI that contains all MPI processes
-    ** @int nb_servers : the number of servers
-    ** @std::filesystem::path &folder_path : the reference to the folder of the processus
-    */
-    static Client
-    FromCommandFile(const std::filesystem::path &command_file_path,
-                    MPI_Comm com, int nb_servers,
-                    const std::filesystem::path &folder_path);
 
     /*
     ** work Function
@@ -51,19 +41,30 @@ public:
     */
     void receive(HandshakeFailure &msg) override;
     void receive(HandshakeSuccess &msg) override;
-    
+
     void receive(MeNotLeader &msg) override;
+    void receive(SuccessLoad &msg) override;
+    void receive(SuccessList &msg) override;
+
+    std::unique_ptr<Command> load_next_command();
 
 private:
+    int command_index = 0;
     size_t messages_index = 0;
-    int target_rank = -1;                                   // Index of the current target server
-    bool target_alive = false;                              // Satus of the current target server
-    bool waiting_for_handshake = false;                     // Status of the current client
+    int target_rank = -1; // Index of the current target server
+    bool target_alive = false; // Satus of the current target server
+    bool waiting_for_handshake = false; // Status of the current client
     int expected_handshake_rank = 0;
+
+    std::map<std::string, int> filename_to_uid;
+
+    std::shared_ptr<Command> current_command;
+
+    std::ifstream commands_file;
 
     std::chrono::milliseconds handshake_timeout =
         std::chrono::milliseconds(10000);
     std::chrono::milliseconds handshake_timeout_till =
         std::chrono::milliseconds(0);
-    std::vector<std::shared_ptr<Command>> commands;
+    // std::vector<std::shared_ptr<Command>> commands;
 };

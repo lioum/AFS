@@ -15,7 +15,7 @@ int main (int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     if (argc < 3 && rank == 0) 
-        std::cout << "Use run.sh script." << std::endl;
+        std::cerr << "Use run.sh script." << std::endl;
 
     //Retrieve the parameters for the processus
     int nb_servers = std::stoi(argv[1]);
@@ -25,20 +25,20 @@ int main (int argc, char *argv[])
     //Start the processus
     if (rank == 0)
     {
-        //std::cout << rank << ": I'm the REPL" << std::endl;
+        //std::cerr << rank << ": I'm the REPL" << std::endl;
         REPL repl(MPI_COMM_WORLD, nb_servers);
         repl.run();
     }
     else if (rank < nb_servers + 1)
     {
-        //std::cout << rank << ": I'm a server" << std::endl;
-        RaftServer server(MPI_COMM_WORLD, nb_servers, "server_folders/server_");
+        //std::cerr << rank << ": I'm a server" << std::endl;
+        RaftServer server(MPI_COMM_WORLD, nb_servers, "server_folders");
         server.run();
     }
     else
     {
-        //std::cout << rank << ": I'm a client" << std::endl;
-        Client client = Client::FromCommandFile("commands.txt", MPI_COMM_WORLD, nb_clients, "client_folders/client_");
+        //std::cerr << rank << ": I'm a client" << std::endl;
+        Client client = Client(MPI_COMM_WORLD, nb_clients, "client_folders", "commands.txt");
         client.run();
     }
     MPI_Finalize();

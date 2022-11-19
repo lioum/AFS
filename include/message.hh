@@ -28,6 +28,8 @@ enum class MessageType
     HANDSHAKE_SUCCESS,
     CLIENT_REQUEST,
     ME_NOT_LEADER,
+    SUCCESS_LOAD,
+    SUCCESS_LIST,
 };
 
 /*
@@ -48,6 +50,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
         { MessageType::HANDSHAKE_SUCCESS, "HANDSHAKE_SUCCESS" },
         { MessageType::CLIENT_REQUEST, "CLIENT_REQUEST" },
         { MessageType::ME_NOT_LEADER, "ME_NOT_LEADER" },
+        { MessageType::SUCCESS_LOAD, "SUCCESS_LOAD" },
+        { MessageType::SUCCESS_LIST, "SUCCESS_LIST" },
     })
 
 /*
@@ -440,3 +444,41 @@ public:
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HandshakeSuccess, type, sender_rank,
                                    target_rank, data)
+
+class SuccessLoad : public Message
+{
+public:
+    SuccessLoad()
+        : Message(MessageType::SUCCESS_LOAD){};
+    SuccessLoad(int target_rank, int sender_rank, int file_uid, std::string file_name)
+        : Message(MessageType::SUCCESS_LOAD, target_rank, sender_rank)
+        , file_uid(file_uid)
+        , file_name(file_name){};
+
+    virtual std::string serialize() const override;
+    void accept(Processus &process) override;
+    
+    int file_uid;
+    std::string file_name;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SuccessLoad, type, sender_rank,
+                                   target_rank, file_uid, file_name);
+
+class SuccessList : public Message
+{
+public:
+    SuccessList()
+        : Message(MessageType::SUCCESS_LIST){};
+    SuccessList(int target_rank, int sender_rank, std::vector<int> file_uids)
+        : Message(MessageType::SUCCESS_LIST, target_rank, sender_rank)
+        , file_uids(file_uids){};
+
+    virtual std::string serialize() const override;
+    void accept(Processus &process) override;
+    
+    std::vector<int> file_uids;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SuccessList, type, sender_rank,
+                                   target_rank, file_uids);

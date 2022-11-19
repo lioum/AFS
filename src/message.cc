@@ -61,6 +61,16 @@ void HandshakeSuccess::accept(Processus &process)
     process.receive(*this);
 }
 
+void SuccessLoad::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
+void SuccessList::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
 void ClientRequest::accept(Processus &process)
 {
     process.receive(*this);
@@ -129,6 +139,20 @@ std::string MeNotLeader::serialize() const
     return j.dump();
 }
 
+std::string SuccessLoad::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::string SuccessList::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
 std::string HandshakeSuccess::serialize() const
 {
     json j = *this;
@@ -171,6 +195,10 @@ std::unique_ptr<Message> Message::deserialize(const json &j)
         return std::make_unique<HandshakeSuccess>(j.get<HandshakeSuccess>());
     case MessageType::CLIENT_REQUEST:
         return std::make_unique<ClientRequest>(j.get<ClientRequest>());
+    case MessageType::SUCCESS_LOAD:
+        return std::make_unique<SuccessLoad>(j.get<SuccessLoad>());
+    case MessageType::SUCCESS_LIST:
+        return std::make_unique<SuccessList>(j.get<SuccessList>());
     }
     return nullptr;
 }

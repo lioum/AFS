@@ -25,7 +25,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(CommandType,
                                { CommandType::APPEND, "APPEND" },
                                { CommandType::LIST, "LIST" },
                                { CommandType::LOAD, "LOAD" },
-                               { CommandType::CLIENT_DELETE, "CLIENT_DELETE" } })
+                               { CommandType::CLIENT_DELETE,
+                                 "CLIENT_DELETE" } })
 
 /*
 ** Class Command
@@ -35,14 +36,15 @@ NLOHMANN_JSON_SERIALIZE_ENUM(CommandType,
 class Command
 {
 public:
-
     /*
     ** Constructor
     **
     ** @CommandType type : Specify the type of command
     */
-    Command(CommandType type, int client_uid)
-        : type(type), client_uid(client_uid)
+    Command(CommandType type, int client_uid, int command_id)
+        : type(type)
+        , client_uid(client_uid)
+        , command_id(command_id)
     {}
 
     /*
@@ -55,6 +57,7 @@ public:
 
     CommandType type;
     int client_uid;
+    int command_id;
 };
 
 /*
@@ -65,11 +68,11 @@ public:
 class Delete : public Command
 {
 public:
-    Delete(): Command(CommandType::DELETE, -1) {};
-    Delete(int client_uid, int uid)
-        : Command(CommandType::DELETE, client_uid)
+    Delete()
+        : Command(CommandType::DELETE, -1, -1){};
+    Delete(int client_uid, int command_id, int uid)
+        : Command(CommandType::DELETE, client_uid, command_id)
         , uid(uid){};
-
 
     virtual void call_execute(InternProcessus &) override;
     virtual nlohmann::json to_json() const override;
@@ -77,7 +80,8 @@ public:
     int uid;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Delete, type, client_uid, type, uid)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Delete, type, client_uid, command_id, type,
+                                   uid)
 
 /*
 **  Class ClientDelete
@@ -87,11 +91,11 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Delete, type, client_uid, type, uid)
 class ClientDelete : public Command
 {
 public:
-    ClientDelete(): Command(CommandType::CLIENT_DELETE, -1) {};
-    ClientDelete(int client_uid, const std::string &filename)
-        : Command(CommandType::CLIENT_DELETE, client_uid)
+    ClientDelete()
+        : Command(CommandType::CLIENT_DELETE, -1, -1){};
+    ClientDelete(int client_uid, int command_id, const std::string &filename)
+        : Command(CommandType::CLIENT_DELETE, client_uid, command_id)
         , filename(filename){};
-
 
     virtual void call_execute(InternProcessus &) override;
     virtual nlohmann::json to_json() const override;
@@ -107,15 +111,16 @@ public:
 class List : public Command
 {
 public:
-    List(): Command(CommandType::LIST, -1) {};
-    List(int client_uid)
-        : Command(CommandType::LIST, client_uid){};
+    List()
+        : Command(CommandType::LIST, -1, -1){};
+    List(int client_uid, int command_id)
+        : Command(CommandType::LIST, client_uid, command_id){};
 
     virtual void call_execute(InternProcessus &) override;
     virtual nlohmann::json to_json() const override;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(List, type, client_uid)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(List, type, client_uid, command_id)
 
 /*
 **  Class Append
@@ -125,8 +130,12 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(List, type, client_uid)
 class Append : public Command
 {
 public:
-    Append(): Command(CommandType::APPEND, -1) {};
-    Append(int client_uid, int uid, const std::string &content) : Command(CommandType::APPEND, client_uid), uid(uid), content(content){};
+    Append()
+        : Command(CommandType::APPEND, -1, -1){};
+    Append(int client_uid, int command_id, int uid, const std::string &content)
+        : Command(CommandType::APPEND, client_uid, command_id)
+        , uid(uid)
+        , content(content){};
 
     virtual void call_execute(InternProcessus &) override;
     virtual nlohmann::json to_json() const override;
@@ -135,7 +144,8 @@ public:
     std::string content;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Append, type, client_uid, content, uid)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Append, type, client_uid, command_id,
+                                   content, uid)
 
 /*
 **  Class Load
@@ -145,8 +155,13 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Append, type, client_uid, content, uid)
 class Load : public Command
 {
 public:
-    Load(): Command(CommandType::LOAD, -1) {};
-    Load(int client_uid, const std::string &filename, const std::string &content): Command(CommandType::LOAD, client_uid), filename(filename), content(content){};
+    Load()
+        : Command(CommandType::LOAD, -1, -1){};
+    Load(int client_uid, int command_id, const std::string &filename,
+         const std::string &content)
+        : Command(CommandType::LOAD, client_uid, command_id)
+        , filename(filename)
+        , content(content){};
 
     virtual void call_execute(InternProcessus &) override;
     virtual nlohmann::json to_json() const override;
@@ -155,8 +170,8 @@ public:
     std::string content;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Load, type, client_uid, filename, content)
-
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Load, type, client_uid, command_id, filename,
+                                   content)
 
 namespace nlohmann
 {
@@ -185,8 +200,10 @@ namespace nlohmann
         {
             if (j.is_null())
                 opt = nullptr;
-            else {
-                switch(j.at("type").get<CommandType>()) {
+            else
+            {
+                switch (j.at("type").get<CommandType>())
+                {
                 case CommandType::DELETE:
                     opt = std::make_unique<Delete>(j.get<Delete>());
                     break;
@@ -200,10 +217,11 @@ namespace nlohmann
                     opt = std::make_unique<Load>(j.get<Load>());
                     break;
                 case CommandType::CLIENT_DELETE:
-                    throw std::runtime_error("CLIENT_DELETE is not supposed to be serialized");
+                    throw std::runtime_error(
+                        "CLIENT_DELETE is not supposed to be serialized");
                     break;
                 }
             }
         }
     };
-} 
+} // namespace nlohmann

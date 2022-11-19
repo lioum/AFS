@@ -37,7 +37,7 @@ std::shared_ptr<Message> Processus::listen()
             (char *)malloc((sizeof(char)) * MPI_MAX_ERROR_STRING);
         int len;
         MPI_Error_string(err, error_string, &len);
-        std::cout << "Receiving: " << error_string << std::endl;
+        std::cerr << "Receiving: " << error_string << std::endl;
     }
     std::shared_ptr<Message> message = Message::deserialize(json::parse(buffer));
     return message;
@@ -55,7 +55,7 @@ void Processus::send(const Message &msg)
             (char *)malloc((sizeof(char)) * MPI_MAX_ERROR_STRING);
         int len;
         MPI_Error_string(err, error_string, &len);
-        std::cout << "Send: " << error_string << std::endl;
+        std::cerr << "Send: " << error_string << std::endl;
     }
 }
 
@@ -97,22 +97,22 @@ InternProcessus::InternProcessus(MPI_Comm com, int nb_servers,
     int speed_val = as_integer(speed);
     sleeping_time = speed_val * speed_val * std::chrono::milliseconds(1000);
 
-    working_folder_path += root_folder_path;
-    working_folder_path += std::to_string(uid);
+    working_folder_path = root_folder_path / std::to_string(uid);
+
     if (!std::filesystem::exists(working_folder_path))
         std::filesystem::create_directory(working_folder_path);
 }
 
 void InternProcessus::receive(ReplCrash &msg)
 {
-    std::cout << "Processus(" << uid << ") is crashing." << std::endl;
+    std::cerr << "Processus(" << uid << ") is crashing." << std::endl;
     crashed = true;
     send(HandshakeSuccess(msg.sender_rank, uid));
 }
 
 void InternProcessus::receive(ReplSpeed &msg)
 {
-    std::cout << "Processus(" << uid << ") is changing speed from "
+    std::cerr << "Processus(" << uid << ") is changing speed from "
               << as_integer(speed) << " to " << as_integer(msg.speed)
               << std::endl;
     speed = msg.speed;
@@ -123,13 +123,13 @@ void InternProcessus::receive(ReplSpeed &msg)
 
 void InternProcessus::receive(ReplStart &msg)
 {
-    std::cout << "Processus(" << uid << ") is starting" << std::endl;
+    std::cerr << "Processus(" << uid << ") is starting" << std::endl;
     started = true;
     send(HandshakeSuccess(msg.sender_rank, uid));
 }
 
 void InternProcessus::receive(RpcMessage &msg)
 {
-    std::cout << "Processus(" << uid << ") is starting" << std::endl;
+    std::cerr << "Processus(" << uid << ") is starting" << std::endl;
     send(HandshakeSuccess(msg.sender_rank, uid));
 }

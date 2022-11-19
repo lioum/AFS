@@ -13,9 +13,9 @@ REPL::REPL(MPI_Comm com, int nb_servers)
 void REPL::work()
 {
     std::string input;
-    if (!waiting_for_handshake)
+    if (!waiting_for_handshake && !std::cin.eof())
     {
-        //std::cout << "REPL(" << uid << ")$ ";
+        std::cout << "REPL{" << uid << "} (START / CRASH / LOAD / DELETE)$ ";
         std::cin >> input;
         std::shared_ptr<Message> bite = process_message(input);
         if (bite != nullptr)
@@ -30,7 +30,7 @@ void REPL::receive(HandshakeFailure &msg)
 {
     if (waiting_for_handshake)
     {
-        std::cout << "REPL " << uid << " received handshake failure from server "
+        std::cerr << "REPL " << uid << " received handshake failure from server "
               << msg.sender_rank <<std::endl;
         waiting_for_handshake = false;
     }
@@ -40,7 +40,7 @@ void REPL::receive(HandshakeSuccess &msg)
 {
     if (waiting_for_handshake)
     {
-        std::cout << "REPL " << uid << " received handshake success from server "
+        std::cerr << "REPL " << uid << " received handshake success from server "
               << msg.sender_rank <<std::endl;
         waiting_for_handshake = false;
     }
@@ -52,7 +52,7 @@ std::shared_ptr<Message> REPL::process_message(const std::string &input)
     int target_rank;
     if (input == "CRASH") // DEAFEN
     {
-        std::cout << "REPL: Crashing which one ? ";
+        std::cerr << "REPL: Crashing which one ? ";
         std::cin >> res;
         try
         {
@@ -60,14 +60,14 @@ std::shared_ptr<Message> REPL::process_message(const std::string &input)
         }
         catch (std::invalid_argument &e)
         {
-            std::cout << "REPL: Invalid rank" << std::endl;
+            std::cerr << "REPL: Invalid rank" << std::endl;
             return nullptr;
         }
         return std::make_shared<ReplCrash>(target_rank, uid);
     }
     else if (input == "SPEED")
     {
-        std::cout << "REPL: changing speed of which one ? ";
+        std::cerr << "REPL: changing speed of which one ? ";
         std::cin >> res;
         try
         {
@@ -75,15 +75,15 @@ std::shared_ptr<Message> REPL::process_message(const std::string &input)
         }
         catch (std::invalid_argument &e)
         {
-            std::cout << "REPL: Invalid rank" << std::endl;
+            std::cerr << "REPL: Invalid rank" << std::endl;
             return nullptr;
         }
         std::string speed_str;
-        std::cout << "REPL: What speed (fast, medium, low) ? ";
+        std::cerr << "REPL: What speed (fast, medium, low) ? ";
         std::cin >> speed_str;
         if (speed_str != "low" && speed_str != "medium" && speed_str != "fast")
         {
-            std::cout << "REPL: Invalid speed" << std::endl;
+            std::cerr << "REPL: Invalid speed" << std::endl;
             return nullptr;
         }
         Speed speed = Speed::FAST;
@@ -99,7 +99,7 @@ std::shared_ptr<Message> REPL::process_message(const std::string &input)
     }
     else if (input == "START")
     {
-        std::cout << "REPL: Starting Which one ? ";
+        std::cerr << "REPL: Starting Which one ? ";
         std::cin >> res;
         try
         {
@@ -107,7 +107,7 @@ std::shared_ptr<Message> REPL::process_message(const std::string &input)
         }
         catch (std::invalid_argument &e)
         {
-            std::cout << "REPL: Invalid rank" << std::endl;
+            std::cerr << "REPL: Invalid rank" << std::endl;
             return nullptr;
         }
         return std::make_shared<ReplStart>(target_rank, uid);

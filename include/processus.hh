@@ -83,6 +83,8 @@ public:
     virtual void receive(ReplStart &){};
     virtual void receive(RpcMessage &){};
     virtual void receive(MeNotLeader &){};
+    virtual void receive(SuccessLoad &){};
+    virtual void receive(SuccessList &){};
 
     MPI_Comm com;
 

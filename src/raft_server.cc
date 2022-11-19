@@ -21,8 +21,8 @@ nanoseconds random_election_timeout()
 }
 
 RaftServer::RaftServer(MPI_Comm com, int nb_servers,
-                       const std::filesystem::path &folder_path)
-    : InternProcessus(com, nb_servers, folder_path)
+                       const std::filesystem::path &root_folder_path)
+    : InternProcessus(com, nb_servers, root_folder_path)
     ,
 
     role(Role::FOLLOWER)
@@ -35,7 +35,7 @@ RaftServer::RaftServer(MPI_Comm com, int nb_servers,
 {
     election_timeout = random_election_timeout();
     heartbeat_timeout = 30ms;
-    std::cout << "Initial election timeout is "
+    std::cerr << "Initial election timeout is "
               << std::chrono::duration_cast<milliseconds>(election_timeout)
               << std::endl;
 
@@ -61,15 +61,50 @@ int RaftServer::get_last_log_index()
     return entries.size() - 1;
 }
 
+int RaftServer::get_prev_log_index(int rank)
+{
+    return next_index[rank - 1] - 1;
+}
+
+int RaftServer::get_prev_log_term(int rank)
+{
+    return entries[get_prev_log_index(rank)].term;
+}
+
 void RaftServer::work()
 {
     std::this_thread::sleep_for(sleeping_time);
     apply_server_rules();
 }
 
+void RaftServer::broadcast_append_entries(RpcAppendEntries &msg)
+{
+    for (int i = 1; i <= nb_servers; i++)
+    {
+        if (i != uid)
+        {
+            msg.prev_log_index = get_prev_log_index(i);
+            msg.prev_log_term = get_prev_log_term(i);
+            msg.target_rank = i;
+            send(msg);
+        }
+    }
+}
+
 void RaftServer::apply_server_rules()
 {
     update_timeouts();
+
+    if (commit_index > last_applied)
+    {
+        last_applied++;
+        // apply log[last_applied] to state machine
+        entries[last_applied].command->call_execute(*this);
+
+        // update entries
+        // check log matching?
+    }
+
     if (role == Role::LEADER)
         apply_leader_rules();
     else
@@ -79,7 +114,7 @@ void RaftServer::apply_server_rules()
 void RaftServer::start_election()
 {
     current_term++;
-    std::cout << std::endl
+    std::cerr << std::endl
               << "Starting election (" << uid << ") "
               << "my new term is " << current_term << std::endl;
 
@@ -87,7 +122,7 @@ void RaftServer::start_election()
     voted_for = uid;
     RpcRequestVote request(-1, uid, current_term, uid, get_last_log_index(),
                            get_last_log_term());
-    std::cout << "I am sending this message: " << request.serialize()
+    std::cerr << "I am sending this message: " << request.serialize()
               << std::endl;
     broadcast_to_servers(request);
     election_timeout = random_election_timeout();
@@ -131,25 +166,39 @@ void RaftServer::apply_leader_rules()
     if (heartbeat_timeout <= 0ms)
     {
         // Empty message to keep connection alive
-        auto msg = RpcAppendEntries(-1, uid, current_term, uid, last_applied,
-                                    entries[last_applied].term,
-                                    std::vector<LogEntry>(), commit_index);
+        RpcAppendEntries heartbeat(-1, uid, current_term, uid, -1, -1,
+                                   std::vector<LogEntry>(), commit_index);
 
-        broadcast_to_servers(msg);
+        broadcast_append_entries(heartbeat);
         heartbeat_timeout = 30ms;
+    }
+
+    for (int i = 1; i <= nb_servers; i++)
+    {
+        if (i != uid)
+        {
+            if (get_last_log_index() >= next_index[i - 1])
+            {
+                auto to_send = RpcAppendEntries(
+                    i, uid, current_term, uid, get_prev_log_index(i),
+                    get_prev_log_term(i), entries, commit_index);
+
+                send(to_send);
+            }
+        }
     }
 
     //
     // if there exists an N such that N > commitIndex, a majority of
-    // matchIndex[i] >= N, and log[N].term == currentTerm: MES COUILLES AU BORD
-    // DE L EAU, ça fait un radeau.
+    // matchIndex[i] >= N, and log[N].term == currentTerm: MES COUILLES AU
+    // BORD DE L EAU, ça fait un radeau.
     // TODO
     // Code Nathan
     // let mut match_indices = leader.match_index.clone();
     //                 match_indices[self.id] = self.entries.len();
     //                 match_indices.sort();
-    //                 let new_commit_index = match_indices[self.senders.len() /
-    //                 2];
+    //                 let new_commit_index =
+    //                 match_indices[self.senders.len() / 2];
 
     //                 if new_commit_index > self.state.commit_index
     //                     && self.entries[new_commit_index - 1].term ==
@@ -159,9 +208,9 @@ void RaftServer::apply_leader_rules()
     //                 }
     int n = commit_index + 1;
     int count = 0;
-    for (int i = 1; i < nb_servers; i++)
+    for (int i = 1; i <= nb_servers; i++)
     {
-        if (match_index[i] >= n)
+        if (match_index[i - 1] >= n)
             count++;
     }
     if (2 * count > nb_servers && (size_t)n < entries.size())
@@ -177,22 +226,6 @@ void RaftServer::receive(ClientRequest &msg)
         // if command received from client
         // append entry to local log
         entries.push_back(LogEntry(current_term, msg.command));
-
-        // respond after entry applied to state machine
-        for (int i = 1; i < nb_servers; i++)
-        {
-            if (i != uid)
-            {
-                if (last_applied >= next_index[uid])
-                {
-                    auto to_send = RpcAppendEntries(i, uid, current_term, uid,
-                                                    next_index[i], current_term,
-                                                    entries, commit_index);
-
-                    send(to_send);
-                }
-            }
-        }
     }
     else
     {
@@ -210,15 +243,6 @@ void RaftServer::receive(RpcMessage &msg)
     election_timeout = random_election_timeout();
 
     // on receive message
-    if (commit_index > last_applied)
-    {
-        last_applied++;
-        // apply log[last_applied] to state machine
-        entries[last_applied].command->call_execute(*this);
-
-        // update entries
-        // check log matching?
-    }
     if (msg.term > current_term)
     {
         current_term = msg.term;
@@ -232,26 +256,26 @@ void RaftServer::receive(RpcRequestVote &msg)
     if (crashed)
         return;
 
-    std::cout << std::endl
+    std::cerr << std::endl
               << "Receive(" << uid
               << "): RpcRequestVote. Role: " << as_integer(role) << std::endl;
-    std::cout << "My term is " << current_term << ", my role is "
+    std::cerr << "My term is " << current_term << ", my role is "
               << as_integer(role) << " the source server (" << msg.sender_rank
               << ") term is " << msg.term << std::endl;
-    std::cout << "Message: " << msg.serialize() << std::endl;
+    std::cerr << "Message: " << msg.serialize() << std::endl;
 
     if (role == Role::CANDIDATE)
     {
         if (current_term >= msg.term)
         {
-            std::cout
+            std::cerr
                 << "I received a vote request but I am an up to date candidate"
                 << std::endl;
             send(RpcVoteResponse(msg.sender_rank, uid, current_term, false));
         }
         else
         {
-            std::cout << "I passed from candidate to follower";
+            std::cerr << "I passed from candidate to follower";
             role = Role::FOLLOWER;
         }
     }
@@ -265,7 +289,7 @@ void RaftServer::receive(RpcRequestVote &msg)
 
         if ((voted_for == -1 || voted_for == msg.candidate_uid) && up_to_date)
         {
-            std::cout << "I will vote for him" << std::endl;
+            std::cerr << "I will vote for him" << std::endl;
 
             voted_for = msg.candidate_uid;
             send(RpcVoteResponse(msg.sender_rank, uid, current_term, true));
@@ -285,6 +309,7 @@ void RaftServer::receive(RpcAppendEntries &msg)
     {
         // If receive appendEntries from current leader
         // respond to appendEntries with appendEntriesResponse
+        // std::cout << "I, " << uid << ", received an heartbeat" << std::endl;
         leader_uid = msg.leader_uid;
 
         // Reply false if term < currentTerm (§5.1)
@@ -306,16 +331,19 @@ void RaftServer::receive(RpcAppendEntries &msg)
             // Append any new entries not already in the log
             for (size_t i = 0; i < msg.entries.size(); i++)
             {
-                std::cout << "entries[msg.prev_log_index + i].term: "
-                          << entries[msg.prev_log_index + i].term << std::endl;
-                std::cout << "msg.entries[i].term: " << msg.entries[i].term
-                          << std::endl;
+                // std::cerr << "entries[msg.prev_log_index + i].term: "
+                //           << entries[msg.prev_log_index + i].term <<
+                //           std::endl;
+                // std::cerr << "msg.entries[i].term: " << msg.entries[i].term
+                //           << std::endl;
                 if (entries[msg.prev_log_index + i].term != msg.entries[i].term)
                 {
-                    std::cout << "before erase in raft server.cc" << std::endl;
+                    // std::cerr << "before erase in raft server.cc" <<
+                    // std::endl;
                     entries.erase(entries.begin() + msg.prev_log_index + i,
                                   entries.end());
-                    std::cout << "after erase in raft server.cc" << std::endl;
+                    // std::cerr << "after erase in raft server.cc" <<
+                    // std::endl;
                     entries.push_back(msg.entries[i]);
                 }
             }
@@ -348,7 +376,7 @@ void RaftServer::receive(RpcVoteResponse &msg)
         {
             role = Role::LEADER;
             leader_uid = uid;
-            std::cout << std::endl 
+            std::cerr << std::endl
                       << "I am the leader(" << uid << ") : STOP THE COUNT!"
                       << std::endl;
             for (int i = 0; i < nb_servers; i++)
@@ -356,17 +384,15 @@ void RaftServer::receive(RpcVoteResponse &msg)
                 next_index[i] = get_last_log_index() + 1;
                 match_index[i] = 0;
             }
-            
-            // Send heartbeat == empty appendEntries
-            int prev_log_index = next_index[uid - 1] - 1;
-            auto new_msg =
-                RpcAppendEntries(-1, uid, current_term, uid, prev_log_index,
-                                 entries[prev_log_index].term,
-                                 std::vector<LogEntry>(), commit_index);
-            std::cout << "I will send my first heartbeat: "
-                      << new_msg.serialize() << std::endl;
 
-            broadcast_to_servers(new_msg);
+            // Send heartbeat == empty appendEntries
+            auto heartbeat = RpcAppendEntries(
+                -1, uid, current_term, uid, get_prev_log_index(uid),
+                get_prev_log_term(uid), std::vector<LogEntry>(), commit_index);
+            std::cerr << "I will send my first heartbeat: "
+                      << heartbeat.serialize() << std::endl;
+
+            broadcast_to_servers(heartbeat);
         }
     }
 }
@@ -382,22 +408,21 @@ void RaftServer::receive(RpcAppendEntriesResponse &msg)
         // if receive AppendEntriesResponse from follower with success
         if (msg.success)
         {
-            match_index[msg.sender_rank] += 1;
-            next_index[msg.sender_rank] = match_index[msg.sender_rank] + 1;
+            match_index[msg.sender_rank - 1] += 1;
+            next_index[msg.sender_rank - 1] =
+                match_index[msg.sender_rank - 1] + 1;
         }
         // if receive AppendEntriesResponse from follower with failure
         else
         {
-            // decrement nextIndex and retry
-            next_index[msg.sender_rank]--; // need to verify next_index value is
-                                           // not 0 since    int
-                                           // TODO decrement only if fails due
-                                           // to log inconsistency (after a new
-                                           // election)
-            auto new_msg =
-                RpcAppendEntries(msg.sender_rank, uid, current_term, uid,
-                                 next_index[msg.sender_rank], current_term,
-                                 entries, commit_index);
+            // decrement nextIndex and retry (fails due to log inconsistency)
+            next_index[msg.sender_rank - 1] = std::max(
+                0, next_index[msg.sender_rank - 1] - 1); // Ensure next_index >= 0
+
+            auto new_msg = RpcAppendEntries(
+                msg.sender_rank, uid, current_term, uid,
+                get_prev_log_index(msg.sender_rank),
+                get_prev_log_term(msg.sender_rank), entries, commit_index);
 
             send(new_msg);
         }
@@ -422,45 +447,6 @@ void RaftServer::receive(HandshakeSuccess &)
         return;
 }
 
-// void RaftServer::receive(ClientLoad &msg)
-// {
-//   if (crashed)
-//       return;
-//   std::cout << "RaftServer(" << uid << ") is loading file " << msg.filename
-//             << std::endl;
-//   entries.push_back(LogEntry(current_term, msg.serialize(),
-//   msg.sender_rank));
-// }
-
-// void RaftServer::receive(ClientList &msg)
-// {
-//   if (crashed)
-//       return;
-
-//   std::cout << "RaftServer(" << uid << ") is going to list all files"
-//             << std::endl;
-//   entries.push_back(LogEntry(current_term, msg.serialize(),
-//   msg.sender_rank));
-// }
-
-// void RaftServer::receive(ClientAppend &msg)
-// {
-//   if (crashed)
-//       return;
-
-//   std::cout << "RaftServer(" << uid << ") is adding " << msg.content
-//             << " to file with uid " << msg.uid << std::endl;
-//   entries.push_back(LogEntry(current_term, msg.serialize(),
-//   msg.sender_rank));
-// }
-
-// void RaftServer::receive(ClientDelete &msg)
-// {
-//   if (crashed)
-//       return;
-
-// }
-
 void RaftServer::execute(Load &msg)
 {
     std::string filename = working_folder_path / msg.filename;
@@ -472,16 +458,18 @@ void RaftServer::execute(Load &msg)
                    MPI_STATUS_IGNORE);
     MPI_File_close(&file);
 
-    int uid = 0;
-    while (uids.find(uid) != uids.end())
+    int file_uid = 0;
+    while (uids.find(file_uid) != uids.end())
     {
-        uid++;
+        file_uid++;
     }
-    uids[uid] = filename;
+    uids[file_uid] = filename;
 
-    json custom_data;
+    /* json custom_data;
     custom_data["UID"] = uid;
-    send(HandshakeSuccess(msg.client_uid, uid, custom_data));
+    send(HandshakeSuccess(msg.client_uid, uid, custom_data)); */
+
+    send(SuccessLoad(msg.client_uid, uid, file_uid, filename));
 }
 
 void RaftServer::execute(List &msg)
@@ -492,14 +480,15 @@ void RaftServer::execute(List &msg)
         list_uids.push_back(key_value.first);
     }
 
-    json custom_data;
-    custom_data["UIDS"] = list_uids;
+    // json custom_data;
+    // custom_data["UIDS"] = list_uids;
 
-    std::cout << "RaftServer(" << uid << ") is going to list all files"
+    std::cerr << "RaftServer(" << uid << ") is going to list all files"
               << std::endl;
     // entries.push_back(LogEntry(current_term, msg));
 
-    send(HandshakeSuccess(msg.client_uid, uid, custom_data));
+    // send(HandshakeSuccess(msg.client_uid, uid, custom_data));
+    send(SuccessList(msg.client_uid, uid, list_uids));
 }
 
 void RaftServer::execute(Append &msg)
@@ -511,7 +500,7 @@ void RaftServer::execute(Append &msg)
                    MPI_STATUS_IGNORE);
     MPI_File_close(&file);
 
-    std::cout << "RaftServer(" << uid << ") is adding " << msg.content
+    std::cerr << "RaftServer(" << uid << ") is adding " << msg.content
               << " to file with uid " << msg.uid << std::endl;
     // entries.push_back(LogEntry(current_term, std::make_shared<Append>(msg)));
 
@@ -523,13 +512,9 @@ void RaftServer::execute(Delete &msg)
     MPI_File_delete(uids[msg.uid].c_str(), MPI_INFO_NULL);
     uids.erase(msg.uid);
 
-    std::cout << "RaftServer(" << uid << ") is deleting file with uid "
+    std::cerr << "RaftServer(" << uid << ") is deleting file with uid "
               << msg.uid << std::endl;
     // entries.push_back(LogEntry(current_term, msg));
-}
 
-void RaftServer::execute(ClientDelete &)
-{
-    throw std::runtime_error(
-        "RaftServer::execute(ClientDelete &) Not implemented");
+    send(HandshakeSuccess(msg.client_uid, uid));
 }
