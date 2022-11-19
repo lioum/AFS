@@ -35,7 +35,7 @@ RaftServer::RaftServer(MPI_Comm com, int nb_servers,
 {
     election_timeout = random_election_timeout();
     heartbeat_timeout = 30ms;
-    std::cerr << "Initial election timeout is "
+    std::cout << "Initial election timeout is "
               << std::chrono::duration_cast<milliseconds>(election_timeout)
               << std::endl;
 
@@ -73,6 +73,8 @@ int RaftServer::get_prev_log_term(int rank)
 
 void RaftServer::work()
 {
+    if (crashed)
+        return;
     std::this_thread::sleep_for(sleeping_time);
     apply_server_rules();
 }
@@ -84,7 +86,6 @@ void RaftServer::broadcast_append_entries(RpcAppendEntries &msg)
         if (i != uid)
         {
             msg.prev_log_index = get_prev_log_index(i);
-            std::cout << "I am gonna send: " << msg.prev_log_index << std::endl;
             msg.prev_log_term = get_prev_log_term(i);
             msg.target_rank = i;
             send(msg);
@@ -115,15 +116,15 @@ void RaftServer::apply_server_rules()
 void RaftServer::start_election()
 {
     current_term++;
-    std::cerr << std::endl
+    std::cout << std::endl
               << "Starting election (" << uid << ") "
               << "my new term is " << current_term << std::endl;
 
-    vote_count = 0;
+    vote_count = 1;
     voted_for = uid;
     RpcRequestVote request(-1, uid, current_term, uid, get_last_log_index(),
                            get_last_log_term());
-    std::cerr << "I am sending this message: " << request.serialize()
+    std::cout << "I am sending this message: " << request.serialize()
               << std::endl;
     broadcast_to_servers(request);
     election_timeout = random_election_timeout();
@@ -257,26 +258,26 @@ void RaftServer::receive(RpcRequestVote &msg)
     if (crashed)
         return;
 
-    std::cerr << std::endl
+    std::cout << std::endl
               << "Receive(" << uid
               << "): RpcRequestVote. Role: " << as_integer(role) << std::endl;
-    std::cerr << "My term is " << current_term << ", my role is "
+    std::cout << "My term is " << current_term << ", my role is "
               << as_integer(role) << " the source server (" << msg.sender_rank
               << ") term is " << msg.term << std::endl;
-    std::cerr << "Message: " << msg.serialize() << std::endl;
+    std::cout << "Message: " << msg.serialize() << std::endl;
 
     if (role == Role::CANDIDATE)
     {
         if (current_term >= msg.term)
         {
-            std::cerr
+            std::cout
                 << "I received a vote request but I am an up to date candidate"
                 << std::endl;
             send(RpcVoteResponse(msg.sender_rank, uid, current_term, false));
         }
         else
         {
-            std::cerr << "I passed from candidate to follower";
+            std::cout << "I passed from candidate to follower";
             role = Role::FOLLOWER;
         }
     }
@@ -290,7 +291,7 @@ void RaftServer::receive(RpcRequestVote &msg)
 
         if ((voted_for == -1 || voted_for == msg.candidate_uid) && up_to_date)
         {
-            std::cerr << "I will vote for him" << std::endl;
+            std::cout << "I will vote for him" << std::endl;
 
             voted_for = msg.candidate_uid;
             send(RpcVoteResponse(msg.sender_rank, uid, current_term, true));
@@ -311,9 +312,9 @@ void RaftServer::receive(RpcAppendEntries &msg)
         // If receive appendEntries from current leader
         // respond to appendEntries with appendEntriesResponse
         leader_uid = msg.leader_uid;
-        std::cout << std::endl << "I, " << uid << ", received an heartbeat" << std::endl;
+        /*std::cout << std::endl << "I, " << uid << ", received an heartbeat" << std::endl;
         std::cout << "The message is: " << msg.serialize() << std::endl;
-        std::cout << "I have " << entries.size() << " entry" << std::endl;
+        std::cout << "I have " << entries.size() << " entry" << std::endl;*/
 
         // Reply false if term < currentTerm (§5.1)
         if (msg.term < current_term)
@@ -334,18 +335,18 @@ void RaftServer::receive(RpcAppendEntries &msg)
             // Append any new entries not already in the log
             for (size_t i = 0; i < msg.entries.size(); i++)
             {
-                // std::cerr << "entries[msg.prev_log_index + i].term: "
+                // std::cout << "entries[msg.prev_log_index + i].term: "
                 //           << entries[msg.prev_log_index + i].term <<
                 //           std::endl;
-                // std::cerr << "msg.entries[i].term: " << msg.entries[i].term
+                // std::cout << "msg.entries[i].term: " << msg.entries[i].term
                 //           << std::endl;
                 if (entries[msg.prev_log_index + i].term != msg.entries[i].term)
                 {
-                    // std::cerr << "before erase in raft server.cc" <<
+                    // std::cout << "before erase in raft server.cc" <<
                     // std::endl;
                     entries.erase(entries.begin() + msg.prev_log_index + i,
                                   entries.end());
-                    // std::cerr << "after erase in raft server.cc" <<
+                    // std::cout << "after erase in raft server.cc" <<
                     // std::endl;
                     entries.push_back(msg.entries[i]);
                 }
@@ -379,7 +380,7 @@ void RaftServer::receive(RpcVoteResponse &msg)
         {
             role = Role::LEADER;
             leader_uid = uid;
-            std::cerr << std::endl
+            std::cout << std::endl
                       << "I am the leader(" << uid << ") : STOP THE COUNT!"
                       << std::endl;
             for (int i = 0; i < nb_servers; i++)
@@ -392,7 +393,7 @@ void RaftServer::receive(RpcVoteResponse &msg)
             auto heartbeat = RpcAppendEntries(
                 -1, uid, current_term, uid, get_prev_log_index(uid),
                 get_prev_log_term(uid), std::vector<LogEntry>(), commit_index);
-            std::cerr << "I will send my first heartbeat: "
+            std::cout << "I will send my first heartbeat: "
                       << heartbeat.serialize() << std::endl;
 
             broadcast_to_servers(heartbeat);
@@ -409,6 +410,8 @@ void RaftServer::receive(RpcAppendEntriesResponse &msg)
     if (role == Role::LEADER)
     {
         // if receive AppendEntriesResponse from follower with success
+        if (get_last_log_index() < next_index[msg.sender_rank - 1])
+            return;
         if (msg.success)
         {
             match_index[msg.sender_rank - 1] += 1;
@@ -432,7 +435,7 @@ void RaftServer::receive(RpcAppendEntriesResponse &msg)
     }
     else
     {
-        std::cerr
+        std::cout
             << "I am not the leader, I should not receive this message from("
             << msg.sender_rank << ")" << std::endl;
     }
@@ -486,7 +489,7 @@ void RaftServer::execute(List &msg)
     // json custom_data;
     // custom_data["UIDS"] = list_uids;
 
-    std::cerr << "RaftServer(" << uid << ") is going to list all files"
+    std::cout << "RaftServer(" << uid << ") is going to list all files"
               << std::endl;
     // entries.push_back(LogEntry(current_term, msg));
 
@@ -503,7 +506,7 @@ void RaftServer::execute(Append &msg)
                    MPI_STATUS_IGNORE);
     MPI_File_close(&file);
 
-    std::cerr << "RaftServer(" << uid << ") is adding " << msg.content
+    std::cout << "RaftServer(" << uid << ") is adding " << msg.content
               << " to file with uid " << msg.uid << std::endl;
     // entries.push_back(LogEntry(current_term, std::make_shared<Append>(msg)));
 
@@ -515,7 +518,7 @@ void RaftServer::execute(Delete &msg)
     MPI_File_delete(uids[msg.uid].c_str(), MPI_INFO_NULL);
     uids.erase(msg.uid);
 
-    std::cerr << "RaftServer(" << uid << ") is deleting file with uid "
+    std::cout << "RaftServer(" << uid << ") is deleting file with uid "
               << msg.uid << std::endl;
     // entries.push_back(LogEntry(current_term, msg));
 

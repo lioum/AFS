@@ -37,7 +37,7 @@ std::shared_ptr<Message> Processus::listen()
             (char *)malloc((sizeof(char)) * MPI_MAX_ERROR_STRING);
         int len;
         MPI_Error_string(err, error_string, &len);
-        std::cerr << "Receiving: " << error_string << std::endl;
+        std::cout << "Receiving: " << error_string << std::endl;
     }
     std::shared_ptr<Message> message = Message::deserialize(json::parse(buffer));
     return message;
@@ -55,7 +55,7 @@ void Processus::send(const Message &msg)
             (char *)malloc((sizeof(char)) * MPI_MAX_ERROR_STRING);
         int len;
         MPI_Error_string(err, error_string, &len);
-        std::cerr << "Send: " << error_string << std::endl;
+        std::cout << "Send: " << error_string << std::endl;
     }
 }
 
@@ -63,8 +63,6 @@ void Processus::broadcast_to_servers(Message &message)
 {
     // LOG ACTION TO LOGFILE (useful in order to recover changes for crashed
     // server coming back online)
-    std::cout << "msg in broadcast to servers (processus.cc): " << message.serialize() << std::endl;
-
     for (int i = 1; i <= nb_servers; i++)
     {
         if (i != uid)
@@ -106,14 +104,14 @@ InternProcessus::InternProcessus(MPI_Comm com, int nb_servers,
 
 void InternProcessus::receive(ReplCrash &msg)
 {
-    std::cerr << "Processus(" << uid << ") is crashing." << std::endl;
+    std::cout << "Processus(" << uid << ") is crashing." << std::endl;
     crashed = true;
     send(HandshakeSuccess(msg.sender_rank, uid));
 }
 
 void InternProcessus::receive(ReplSpeed &msg)
 {
-    std::cerr << "Processus(" << uid << ") is changing speed from "
+    std::cout << "Processus(" << uid << ") is changing speed from "
               << as_integer(speed) << " to " << as_integer(msg.speed)
               << std::endl;
     speed = msg.speed;
@@ -124,13 +122,13 @@ void InternProcessus::receive(ReplSpeed &msg)
 
 void InternProcessus::receive(ReplStart &msg)
 {
-    std::cerr << "Processus(" << uid << ") is starting" << std::endl;
+    std::cout << "Processus(" << uid << ") is starting" << std::endl;
     started = true;
     send(HandshakeSuccess(msg.sender_rank, uid));
 }
 
 void InternProcessus::receive(RpcMessage &msg)
 {
-    std::cerr << "Processus(" << uid << ") is starting" << std::endl;
+    std::cout << "Processus(" << uid << ") is starting" << std::endl;
     send(HandshakeSuccess(msg.sender_rank, uid));
 }

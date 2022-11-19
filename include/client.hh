@@ -63,7 +63,7 @@ private:
     std::ifstream commands_file;
 
     std::chrono::milliseconds handshake_timeout =
-        std::chrono::milliseconds(10000);
+        std::chrono::milliseconds(1000);
     std::chrono::milliseconds handshake_timeout_till =
         std::chrono::milliseconds(0);
     // std::vector<std::shared_ptr<Command>> commands;
