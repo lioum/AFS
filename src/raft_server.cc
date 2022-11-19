@@ -34,6 +34,7 @@ RaftServer::RaftServer(MPI_Comm com, int nb_servers,
     , last_applied(0)
 {
     election_timeout = random_election_timeout();
+    heartbeat_timeout = 30ms;
     std::cout << "Initial election timeout is "
               << std::chrono::duration_cast<milliseconds>(election_timeout)
               << std::endl;
@@ -63,12 +64,12 @@ int RaftServer::get_last_log_index()
 void RaftServer::work()
 {
     std::this_thread::sleep_for(sleeping_time);
-    // std::cout << std::endl << "NEW WORK LOOP:" << std::endl;
     apply_server_rules();
 }
 
 void RaftServer::apply_server_rules()
 {
+    update_timeouts();
     if (role == Role::LEADER)
         apply_leader_rules();
     else
@@ -99,9 +100,6 @@ void RaftServer::update_timeouts()
         // Update timeouts for election
         std::chrono::nanoseconds time_delta =
             std::chrono::system_clock::now() - last_checked;
-        /*std::cout << "time delta in update_timeout(): "
-        << std::chrono::duration_cast<microseconds>(time_delta - sleeping_time)
-        << std::endl;*/
 
         election_timeout = election_timeout - (time_delta - sleeping_time);
 
@@ -119,12 +117,6 @@ void RaftServer::update_timeouts()
 
 void RaftServer::apply_follower_and_candidate_rules()
 {
-    // std::cout << "Before updata: My election timeout is " <<
-    // std::chrono::duration_cast<milliseconds>(election_timeout) << std::endl;
-    update_timeouts();
-    // std::cout << "After updata: My election timeout is " <<
-    // std::chrono::duration_cast<milliseconds>(election_timeout) << std::endl;
-
     // Start new election if timeout
     if (election_timeout <= 0ms)
     {
@@ -135,16 +127,16 @@ void RaftServer::apply_follower_and_candidate_rules()
 
 void RaftServer::apply_leader_rules()
 {
-    // send heartbeat every 30ms ~
+    // Send heartbeat every 30ms ~
     if (heartbeat_timeout <= 0ms)
     {
-        std::cout << "Leader (" << uid << ") broadcasts an heartbeat" << std::endl;
-        // empty message to keep connection alive
+        // Empty message to keep connection alive
         auto msg = RpcAppendEntries(-1, uid, current_term, uid, last_applied,
                                     entries[last_applied].term,
                                     std::vector<LogEntry>(), commit_index);
 
         broadcast_to_servers(msg);
+        heartbeat_timeout = 30ms;
     }
 
     //
@@ -291,13 +283,8 @@ void RaftServer::receive(RpcAppendEntries &msg)
 
     if (role == Role::FOLLOWER)
     {
-        std::cout << std::endl
-                  << "Follower " << uid
-                  << " received an append entries ! The leader is "
-                  << msg.leader_uid << std::endl;
-        // if receive appendEntries from current leader
+        // If receive appendEntries from current leader
         // respond to appendEntries with appendEntriesResponse
-        std::cout << "He received: " << msg.serialize() << std::endl;
         leader_uid = msg.leader_uid;
 
         // Reply false if term < currentTerm (§5.1)
@@ -356,24 +343,21 @@ void RaftServer::receive(RpcVoteResponse &msg)
     if (role == Role::CANDIDATE)
     {
         vote_count += msg.vote_granted;
-        std::cout << "I(" << uid << ") received a " << std::boolalpha
-                  << msg.vote_granted << " vote response" << std::endl;
 
         if (vote_count > nb_servers / 2)
         {
             role = Role::LEADER;
             leader_uid = uid;
-            std::cout << "I am the leader(" << uid << ") : STOP THE COUNT!"
+            std::cout << std::endl 
+                      << "I am the leader(" << uid << ") : STOP THE COUNT!"
                       << std::endl;
-            for (int i = 1; i <= nb_servers; i++)
+            for (int i = 0; i < nb_servers; i++)
             {
                 next_index[i] = get_last_log_index() + 1;
                 match_index[i] = 0;
             }
-            // send heartbeat == empty appendEntries
-            // FIX: prev_log_index = 0, prev_log_term = 0 before first election
-            //      prev_log_index = next_index[uid] - 1, prev_log_term =
-            //      entries[prev_log_index]->term
+            
+            // Send heartbeat == empty appendEntries
             int prev_log_index = next_index[uid - 1] - 1;
             auto new_msg =
                 RpcAppendEntries(-1, uid, current_term, uid, prev_log_index,
