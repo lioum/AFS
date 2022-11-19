@@ -51,6 +51,11 @@ void HandshakeFailure::accept(Processus &process)
     process.receive(*this);
 }
 
+void MeNotLeader::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
 void HandshakeSuccess::accept(Processus &process)
 {
     process.receive(*this);
@@ -117,6 +122,13 @@ std::string HandshakeFailure::serialize() const
     return j.dump();
 }
 
+std::string MeNotLeader::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
 std::string HandshakeSuccess::serialize() const
 {
     json j = *this;
@@ -153,6 +165,8 @@ std::unique_ptr<Message> Message::deserialize(const json &j)
             j.get<RpcAppendEntriesResponse>());
     case MessageType::HANDSHAKE_FAILURE:
         return std::make_unique<HandshakeFailure>(j.get<HandshakeFailure>());
+    case MessageType::ME_NOT_LEADER:
+        return std::make_unique<MeNotLeader>(j.get<MeNotLeader>());
     case MessageType::HANDSHAKE_SUCCESS:
         return std::make_unique<HandshakeSuccess>(j.get<HandshakeSuccess>());
     case MessageType::CLIENT_REQUEST:

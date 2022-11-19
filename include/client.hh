@@ -51,6 +51,8 @@ public:
     */
     void receive(HandshakeFailure &msg) override;
     void receive(HandshakeSuccess &msg) override;
+    
+    void receive(MeNotLeader &msg) override;
 
 private:
     size_t messages_index = 0;

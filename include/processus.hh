@@ -81,7 +81,8 @@ public:
     virtual void receive(ReplCrash &){};
     virtual void receive(ReplSpeed &){};
     virtual void receive(ReplStart &){};
-    virtual void receive(RpcMessage &) {};
+    virtual void receive(RpcMessage &){};
+    virtual void receive(MeNotLeader &){};
 
     MPI_Comm com;
 

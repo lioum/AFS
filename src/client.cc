@@ -171,6 +171,24 @@ void Client::receive(HandshakeFailure &msg)
     }
 }
 
+void Client::receive(MeNotLeader &msg)
+{
+    if (!started || crashed)
+    {
+        return;
+    }
+
+    if (waiting_for_handshake)
+    {
+        std::cout << "Client " << uid << " received MeNotLeader from server "
+                  << msg.sender_rank << std::endl;
+        std::cout << "Client " << uid
+                  << " will use server " << msg.leader_uid << " instead of " << target_rank << " as target server" << std::endl;
+        target_rank = msg.leader_uid;
+        waiting_for_handshake = false;
+    }
+}
+
 void Client::receive(HandshakeSuccess &msg)
 {
     // we check if the client is still available
@@ -186,12 +204,6 @@ void Client::receive(HandshakeSuccess &msg)
                   << " received handshake success from server "
                   << msg.sender_rank << std::endl;
         
-        if (msg.sender_rank != target_rank)
-        {
-            std::cout << "Client " << uid
-                      << " will use server " << msg.sender_rank << " instead of " << target_rank << " as target server" << std::endl;
-            target_rank = msg.sender_rank;
-        }
         waiting_for_handshake = false;
         messages_index += 1;
     }

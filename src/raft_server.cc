@@ -154,6 +154,7 @@ void RaftServer::apply_leader_rules()
 
 void RaftServer::receive(ClientRequest &msg)
 {
+    msg = msg; // GIGA SUS
     if (role == Role::LEADER)
     {
         // if command received from client
@@ -165,21 +166,20 @@ void RaftServer::receive(ClientRequest &msg)
             {
                 if (last_applied >= next_index[uid])
                 {
-                    auto msg = RpcAppendEntries(i, uid,
+                    auto to_send = RpcAppendEntries(i, uid,
                                                 current_term, uid, next_index[i], current_term,
                                                 entries, commit_index);
 
-                    send(msg);
+                    send(to_send);
                 }
             }
         }
     }
     else
     {
-        msg.target_rank = leader_uid;
-        msg.sender_rank = uid;
+        auto to_send = MeNotLeader(msg.sender_rank, uid, leader_uid);
         // redirect client to leader
-        broadcast_to_servers(msg);
+        send(to_send);
     }
 }
 

@@ -26,7 +26,8 @@ enum class MessageType
     RPC_APPEND_ENTRIES_RESPONSE,
     HANDSHAKE_FAILURE,
     HANDSHAKE_SUCCESS,
-    CLIENT_REQUEST
+    CLIENT_REQUEST,
+    ME_NOT_LEADER,
 };
 
 /*
@@ -45,7 +46,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
           "RPC_APPEND_ENTRIES_RESPONSE" },
         { MessageType::HANDSHAKE_FAILURE, "HANDSHAKE_FAILURE" },
         { MessageType::HANDSHAKE_SUCCESS, "HANDSHAKE_SUCCESS" },
-        { MessageType::CLIENT_REQUEST, "CLIENT_REQUEST" }
+        { MessageType::CLIENT_REQUEST, "CLIENT_REQUEST" },
+        { MessageType::ME_NOT_LEADER, "ME_NOT_LEADER" },
     })
 
 /*
@@ -394,6 +396,24 @@ public:
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HandshakeFailure, type, sender_rank,
                                    target_rank, data)
+
+class MeNotLeader : public Message
+{
+public:
+    MeNotLeader()
+        : Message(MessageType::ME_NOT_LEADER){};
+    MeNotLeader(int target_rank, int sender_rank, int leader_uid)
+        : Message(MessageType::ME_NOT_LEADER, target_rank, sender_rank)
+        , leader_uid(leader_uid){};
+
+    virtual std::string serialize() const override;
+    void accept(Processus &process) override;
+    
+    int leader_uid;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(MeNotLeader, type, sender_rank,
+                                   target_rank, leader_uid);
 
 /*
 **  Class HandshakeSuccess
