@@ -94,6 +94,7 @@ public:
     ** Tranform the message into json and dump it
     */
     virtual std::string serialize() const = 0;
+    virtual int get_term() {return -42;};
 
     /*
     ** deserialize Function
@@ -189,7 +190,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplStart, type, sender_rank, target_rank)
 */
 enum class Speed
 {
-    FAST = 2,
+    FAST = 0,
     MEDIUM,
     LOW,
 };
@@ -242,6 +243,7 @@ public:
     }
 
     void accept(Processus &process) override;
+    virtual int get_term() override {return term;};
 
     int term;
 };

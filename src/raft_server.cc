@@ -15,7 +15,7 @@
 nanoseconds random_election_timeout()
 {
     std::random_device rd;
-    std::uniform_int_distribution<long int> dist(150 * 10e6, 300 * 10e6);
+    std::uniform_int_distribution<long int> dist(150 * 10e5, 300 * 10e5);
 
     return nanoseconds(dist(rd));
 }
@@ -25,6 +25,10 @@ RaftServer::RaftServer(MPI_Comm com, int nb_servers,
     : InternProcessus(com, nb_servers, folder_path), role(Role::FOLLOWER)
 {
     election_timeout = random_election_timeout();
+    std::cout << "Initial election timeout is " << std::chrono::duration_cast<milliseconds>(election_timeout) << std::endl;
+
+    last_heartbeat = std::chrono::system_clock::now();
+    last_checked = std::chrono::system_clock::now();
 
     leader_uid = -1;
     current_term = 0;
@@ -38,12 +42,9 @@ RaftServer::RaftServer(MPI_Comm com, int nb_servers,
 
 void RaftServer::work()
 {
-    apply_server_rules();
-    std::cout << "gonna sleep for " << std::chrono::duration_cast<milliseconds>(sleeping_time) << std::endl;
-    chrono_time old = std::chrono::system_clock::now();
     std::this_thread::sleep_for(sleeping_time);
-    std::chrono::nanoseconds delta = std::chrono::system_clock::now() - old;
-    std::cout << "sleep diff: " << std::chrono::duration_cast<milliseconds>(delta - sleeping_time) << std::endl;
+    // std::cout << std::endl << "NEW WORK LOOP:" << std::endl;
+    apply_server_rules();
 }
 
 void RaftServer::apply_server_rules()
@@ -56,9 +57,10 @@ void RaftServer::apply_server_rules()
 
 void RaftServer::start_election()
 {
-    std::cout << "Starting election(" << uid << ")" << std::endl;
-    vote_count = 0;
     current_term++;
+    std::cout << std::endl << "Starting election (" << uid << ") " << "my new term is " << current_term << std::endl;
+
+    vote_count = 0;
     voted_for = uid;
     RpcRequestVote request;
     auto last_log_term = entries.size() ? entries.end()->term : -1;
@@ -74,15 +76,11 @@ void RaftServer::update_timeouts()
     {
         // Update timeouts for election
         std::chrono::nanoseconds time_delta = std::chrono::system_clock::now() - last_checked;
-        std::cout << "sleeping time in update_timeout(): " 
-        << std::chrono::duration_cast<microseconds>(sleeping_time) << std::endl;
-        std::cout << "time delta in update_timeout(): " 
+        /*std::cout << "time delta in update_timeout(): " 
         << std::chrono::duration_cast<microseconds>(time_delta - sleeping_time) 
-        << std::endl;
+        << std::endl;*/
 
-        election_timeout = election_timeout - time_delta - sleeping_time;
-        /*std::cout << "duration cast in update_timeout(): " << time_delta << std::endl;
-        std::cout << "election_timeout in update_timeout(): " << election_timeout << std::endl;*/
+        election_timeout = election_timeout - (time_delta - sleeping_time);
 
         last_checked = std::chrono::system_clock::now();
     }
@@ -90,7 +88,7 @@ void RaftServer::update_timeouts()
     {
         // Update timeouts for heartbeat
         auto time_delta = std::chrono::system_clock::now() - last_heartbeat;
-        heartbeat_timeout = heartbeat_timeout - time_delta - sleeping_time;
+        heartbeat_timeout = heartbeat_timeout - (time_delta - sleeping_time);
 
         last_heartbeat = std::chrono::system_clock::now();
     }
@@ -98,15 +96,14 @@ void RaftServer::update_timeouts()
 
 void RaftServer::apply_follower_and_candidate_rules()
 {
+    //std::cout << "Before updata: My election timeout is " << std::chrono::duration_cast<milliseconds>(election_timeout) << std::endl;
     update_timeouts();
+    //std::cout << "After updata: My election timeout is " << std::chrono::duration_cast<milliseconds>(election_timeout) << std::endl;
 
-    /*if (uid == 3)
-        std::cout << "timeout: " << election_timeout << std::endl;*/
     // Start new election if timeout    
     if (election_timeout <= 0ms)
     {
         role = Role::CANDIDATE;
-        std::cout << "Server " << uid << " changed to candidate" << std::endl;
         start_election();
     }
 }
@@ -216,29 +213,34 @@ void RaftServer::receive(RpcRequestVote &msg)
     if (crashed)
         return;
 
-    std::cout << "Receive(" << uid << "): RpcRequestVote" << std::endl;
+    std::cout << std::endl << "Receive(" << uid << "): RpcRequestVote. Role: " << as_integer(role) << std::endl;
+    std::cout << "My term is " << current_term 
+    << " the source server (" << msg.sender_rank << ") term is " << msg.term << std::endl;
 
-    std::cout << "What am I ? " << as_integer(role) << std::endl;
     if (role == Role::CANDIDATE)
     {
-        if (current_term >= msg.last_log_term)
+        if (current_term >= msg.term)
+        {
+            std::cout << "I received a vote request but I am an up to date candidate" << std::endl;
             send(RpcVoteResponse(msg.sender_rank, uid, current_term, false));
+        }
         else
+        {
+            std::cout << "I passed from candidate to follower";
             role = Role::FOLLOWER;
+        }
     }
     // if receive requestVote from candidate
     // respond to requestVote with voteResponse
     if (role == Role::FOLLOWER)
     {
-        std::cout << "message last log index: " << msg.last_log_index << " and last applied: " << last_applied << std::endl;
-        std::cout << "voted for: " << voted_for << std::endl;
-        std::cout << "last log term: " << msg.last_log_term << std::endl;
-        std::cout << "current term: " << current_term << std::endl;
+        std::cout << "Message: " << msg.serialize() << std::endl;
         if ((voted_for == -1 || voted_for == msg.candidate_uid) && (msg.last_log_index >= last_applied && msg.last_log_term >= current_term))
         {
-            std::cout << "I can vote" << std::endl;
+            std::cout << "I will vote for him" << std::endl;
   
-            voted_for = msg.candidate_uid;          send(RpcVoteResponse(msg.sender_rank, uid, current_term, true));
+            voted_for = msg.candidate_uid;
+            send(RpcVoteResponse(msg.sender_rank, uid, current_term, true));
         }
     }
 }

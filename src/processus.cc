@@ -39,10 +39,7 @@ std::shared_ptr<Message> Processus::listen()
         MPI_Error_string(err, error_string, &len);
         std::cout << "Receiving: " << error_string << std::endl;
     }
-    //std::string s(buffer.begin(), buffer.end());
-    //std::cout << "Received: " << s << std::endl;
     std::shared_ptr<Message> message = Message::deserialize(json::parse(buffer));
-    //std::cout << "SUS: " << s << std::endl;
     return message;
 }
 
@@ -51,6 +48,7 @@ void Processus::send(const Message &msg)
     auto serialization = msg.serialize();
     int err = MPI_Send(serialization.data(), serialization.length(), MPI_CHAR,
                        msg.target_rank, 0, com);
+    
     if (err != 0)
     {
         char *error_string =

@@ -15,7 +15,7 @@ void REPL::work()
     std::string input;
     if (!waiting_for_handshake)
     {
-        std::cout << "REPL(" << uid << ")$ ";
+        //std::cout << "REPL(" << uid << ")$ ";
         std::cin >> input;
         std::shared_ptr<Message> bite = process_message(input);
         if (bite != nullptr)
