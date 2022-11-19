@@ -98,6 +98,9 @@ private:
     std::map<int, std::string> uids;
 
 protected:
+    int get_last_log_index();
+    int get_last_log_term();
+    
     Role role;
 
     std::vector<LogEntry> entries;

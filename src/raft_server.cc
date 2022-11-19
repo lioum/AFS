@@ -30,6 +30,9 @@ RaftServer::RaftServer(MPI_Comm com, int nb_servers,
     last_heartbeat = std::chrono::system_clock::now();
     last_checked = std::chrono::system_clock::now();
 
+    // Faux log pour eviter d'avoir des checks sur les entries vides
+    entries.push_back(LogEntry(-1, nullptr));
+
     leader_uid = -1;
     current_term = 0;
     voted_for = -1;
@@ -38,6 +41,16 @@ RaftServer::RaftServer(MPI_Comm com, int nb_servers,
     last_applied = 0;
 
     vote_count = 0;
+}
+
+int RaftServer::get_last_log_term()
+{
+    return (entries.end() - 1)->term;
+}
+
+int RaftServer::get_last_log_index()
+{
+    return entries.size() - 1;
 }
 
 void RaftServer::work()
@@ -62,10 +75,9 @@ void RaftServer::start_election()
 
     vote_count = 0;
     voted_for = uid;
-    RpcRequestVote request;
-    auto last_log_term = entries.size() ? entries.end()->term : -1;
-    request = RpcRequestVote(-1, uid, current_term, uid,
-                             entries.size(), last_log_term);
+    RpcRequestVote request (-1, uid, current_term, uid,
+                            get_last_log_index(), get_last_log_term());
+    std::cout << "I am sending this message: " << request.serialize() << std::endl;
     broadcast_to_servers(request);
     election_timeout = random_election_timeout();
 }
@@ -215,7 +227,9 @@ void RaftServer::receive(RpcRequestVote &msg)
 
     std::cout << std::endl << "Receive(" << uid << "): RpcRequestVote. Role: " << as_integer(role) << std::endl;
     std::cout << "My term is " << current_term 
-    << " the source server (" << msg.sender_rank << ") term is " << msg.term << std::endl;
+    << ", my role is " << as_integer(role) << " the source server (" 
+    << msg.sender_rank << ") term is " << msg.term << std::endl;
+    std::cout << "Message: " << msg.serialize() << std::endl;
 
     if (role == Role::CANDIDATE)
     {
@@ -234,8 +248,11 @@ void RaftServer::receive(RpcRequestVote &msg)
     // respond to requestVote with voteResponse
     if (role == Role::FOLLOWER)
     {
-        std::cout << "Message: " << msg.serialize() << std::endl;
-        if ((voted_for == -1 || voted_for == msg.candidate_uid) && (msg.last_log_index >= last_applied && msg.last_log_term >= current_term))
+        bool up_to_date = (get_last_log_term() > msg.last_log_term) || 
+                          (get_last_log_term() == msg.last_log_term 
+                           && get_last_log_index() >= msg.last_log_index);
+
+        if ((voted_for == -1 || voted_for == msg.candidate_uid) && up_to_date)
         {
             std::cout << "I will vote for him" << std::endl;
   
@@ -311,6 +328,8 @@ void RaftServer::receive(RpcVoteResponse &msg)
                                             commit_index);
 
             broadcast_to_servers(new_msg);
+            std::cout << "I, the new leader, didn't segfault ... maybe ?" 
+            << std::endl;
         }
     }
 }
