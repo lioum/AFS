@@ -84,6 +84,7 @@ void RaftServer::broadcast_append_entries(RpcAppendEntries &msg)
         if (i != uid)
         {
             msg.prev_log_index = get_prev_log_index(i);
+            std::cout << "I am gonna send: " << msg.prev_log_index << std::endl;
             msg.prev_log_term = get_prev_log_term(i);
             msg.target_rank = i;
             send(msg);
@@ -309,8 +310,10 @@ void RaftServer::receive(RpcAppendEntries &msg)
     {
         // If receive appendEntries from current leader
         // respond to appendEntries with appendEntriesResponse
-        // std::cout << "I, " << uid << ", received an heartbeat" << std::endl;
         leader_uid = msg.leader_uid;
+        std::cout << std::endl << "I, " << uid << ", received an heartbeat" << std::endl;
+        std::cout << "The message is: " << msg.serialize() << std::endl;
+        std::cout << "I have " << entries.size() << " entry" << std::endl;
 
         // Reply false if term < currentTerm (§5.1)
         if (msg.term < current_term)

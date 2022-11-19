@@ -232,9 +232,13 @@ void Client::work()
                   << " timed out waiting for handshake from server "
                   << target_rank << std::endl;
         // const auto &cmd = commands.at(messages_index);
-        ClientRequest request(-1, uid, current_command);
 
-        broadcast_to_servers(request);
+        target_rank = rand() % nb_servers + 1;
+
+        ClientRequest request(target_rank, uid, current_command);
+
+        //broadcast_to_servers(request);
+        send(request);
         waiting_for_handshake = true;
     }
 

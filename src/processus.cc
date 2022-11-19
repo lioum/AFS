@@ -63,6 +63,7 @@ void Processus::broadcast_to_servers(Message &message)
 {
     // LOG ACTION TO LOGFILE (useful in order to recover changes for crashed
     // server coming back online)
+    std::cout << "msg in broadcast to servers (processus.cc): " << message.serialize() << std::endl;
 
     for (int i = 1; i <= nb_servers; i++)
     {
