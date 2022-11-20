@@ -26,7 +26,7 @@ int main (int argc, char *argv[])
     if (rank == 0)
     {
         //std::cout << rank << ": I'm the REPL" << std::endl;
-        REPL repl(MPI_COMM_WORLD, nb_servers);
+        REPL repl(MPI_COMM_WORLD, nb_servers, nb_clients);
         repl.run();
     }
     else if (rank < nb_servers + 1)

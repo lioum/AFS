@@ -27,13 +27,11 @@ std::unique_ptr<Command> Client::load_next_command()
 
                 throw std::runtime_error("Failed to parse command file");
             }
-            std::string filename = inline_words[1];
+            auto filepath = working_folder_path / inline_words[1];
 
             // Read file content to content
-            std::string content = readFileIntoString(filename);
-            // messages.push_back(std::make_unique<Load>(sender_rank,
-            // command_index++, filename, content));
-            return std::make_unique<Load>(uid, command_index++, filename,
+            std::string content = readFileIntoString(filepath);
+            return std::make_unique<Load>(uid, command_index++, inline_words[1],
                                           content);
         }
         else if (inline_words[0] == "LIST")
@@ -44,8 +42,7 @@ std::unique_ptr<Command> Client::load_next_command()
                           << "No text required after LIST" << std::endl;
                 throw std::runtime_error("Failed to parse command file");
             }
-            // messages.push_back(
-            //     std::make_unique<List>(sender_rank, command_index++));
+
             return std::make_unique<List>(uid, command_index++);
         }
         else if (inline_words[0] == "APPEND")
@@ -57,11 +54,17 @@ std::unique_ptr<Command> Client::load_next_command()
                           << std::endl;
                 throw std::runtime_error("Failed to parse command file");
             }
-            auto uid_file = filename_to_uid[inline_words[1]];
-            // messages.push_back(std::make_unique<Append>(sender_rank,
-            // command_index++, uid_file, inline_words[2]));
-            return std::make_unique<Append>(uid, command_index++, uid_file,
-                                            inline_words[2]);
+
+            try {
+                auto uid_file = filename_to_uid.at(inline_words[1]);
+                return std::make_unique<Append>(uid, command_index++, uid_file,
+                                                inline_words[2]);
+            }
+            catch (std::exception &error)
+            {
+                std::cerr << "File " << inline_words[1] 
+                << " is not loaded (in APPEND command)" << std::endl;  
+            }
         }
         else if (inline_words[0] == "DELETE")
         {
@@ -72,11 +75,15 @@ std::unique_ptr<Command> Client::load_next_command()
                 throw std::runtime_error("Failed to parse command file");
             }
 
-            auto uid_file = filename_to_uid[inline_words[1]];
-
-            // messages.push_back(std::make_unique<Delete>(sender_rank,
-            // command_index++, uid_file));
-            return std::make_unique<Delete>(uid, command_index++, uid_file);
+            try {
+                auto uid_file = filename_to_uid.at(inline_words[1]);
+                return std::make_unique<Delete>(uid, command_index++, uid_file);
+            }
+            catch (std::exception &error)
+            {
+                std::cerr << "File " << inline_words[1] 
+                << " is not loaded (in DELETE command)" << std::endl;  
+            }
         }
     }
 
@@ -96,15 +103,16 @@ Client::Client(
 
     if (!commands_file)
         throw std::runtime_error("Could not open command file");
+
+    current_command = load_next_command();
 }
 
 void Client::work()
 {
     // we check if the client is still available
-    if (!started || crashed)
-    {
+    if (!started || crashed || current_command == nullptr)
         return;
-    }
+
     std::chrono::milliseconds now = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch());
     //auto now = std::chrono::system_clock::now();
@@ -118,22 +126,23 @@ void Client::work()
         // const auto &cmd = commands.at(messages_index);
 
         target_rank = rand() % nb_servers + 1;
-        std::cout << "Pinging for server: " << target_rank << std::endl;
         ClientRequest request(target_rank, uid, current_command);
 
         //broadcast_to_servers(request);
         send(request);
         waiting_for_handshake = true;
         handshake_timeout_till = now + handshake_timeout;
-
     }
 
     // Client ready to send a message
     if (!waiting_for_handshake)
     {
         // const auto &cmd = commands.at(messages_index);
-        ClientRequest request(-1, uid, current_command);
+        ClientRequest request(target_rank, uid, current_command);
 
+        std::cerr << std::endl << "Client " << uid <<
+        " send " << request.serialize() << std::endl;
+        
         send(request);
         waiting_for_handshake = true;
         handshake_timeout_till = now + handshake_timeout;

@@ -6,8 +6,9 @@
 #include <mpi.h>
 #include <optional>
 
-REPL::REPL(MPI_Comm com, int nb_servers)
+REPL::REPL(MPI_Comm com, int nb_servers, int nb_clients)
     : Processus(com, nb_servers)
+    , nb_clients(nb_clients)
 {}
 
 void REPL::work()
@@ -17,10 +18,13 @@ void REPL::work()
     {
         std::cerr << "REPL{" << uid << "} (START / CRASH / LOAD / DELETE)$ ";
         std::cin >> input;
-        std::shared_ptr<Message> bite = process_message(input);
-        if (bite != nullptr)
+        std::shared_ptr<Message> repl_command = process_message(input);
+
+        if (repl_command->target_rank > 0 && 
+            repl_command->target_rank <= (nb_clients + nb_servers) && 
+            repl_command != nullptr)
         {
-            send(*bite);
+            send(*repl_command);
             waiting_for_handshake = true;
         }
     }

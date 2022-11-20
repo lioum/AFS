@@ -18,7 +18,7 @@ public:
     ** @MPI_Comm com : the communicator provided by MPI that contains all MPI processes
     ** @int nb_servers : the number of servers
     */
-    REPL(MPI_Comm com, int nb_servers);
+    REPL(MPI_Comm com, int nb_servers, int nb_clients);
 
     /*
     ** work Function
@@ -44,4 +44,5 @@ private:
     */
     std::shared_ptr<Message> process_message(const std::string &input);
     bool waiting_for_handshake = false;
+    int nb_clients;
 };

@@ -101,7 +101,11 @@ void RaftServer::apply_server_rules()
     {
         last_applied++;
         // apply log[last_applied] to state machine
+        std::cerr << std::endl
+                  << "Server " << uid << " is trying to apply entry "
+                  << last_applied << std::endl;
         entries[last_applied].command->call_execute(*this);
+        std::cerr << "reached after call_exectue." << std::endl;
 
         // update entries
         // check log matching?
@@ -216,15 +220,16 @@ void RaftServer::apply_leader_rules()
             count++;
     }
     if (2 * count > nb_servers && (size_t)n < entries.size())
-    {
-        commit_index = n;
-    }
+        commit_index++;
 }
 
 void RaftServer::receive(ClientRequest &msg)
 {
     if (role == Role::LEADER)
     {
+        std::cerr << "Leader received client request: " << msg.serialize()
+                  << std::endl;
+
         // if command received from client
         // append entry to local log
         entries.push_back(LogEntry(current_term, msg.command));
@@ -312,9 +317,10 @@ void RaftServer::receive(RpcAppendEntries &msg)
         // If receive appendEntries from current leader
         // respond to appendEntries with appendEntriesResponse
         leader_uid = msg.leader_uid;
-        /*std::cout << std::endl << "I, " << uid << ", received an heartbeat" << std::endl;
-        std::cout << "The message is: " << msg.serialize() << std::endl;
-        std::cout << "I have " << entries.size() << " entry" << std::endl;*/
+        /*std::cout << std::endl << "I, " << uid << ", received an heartbeat" <<
+        std::endl; std::cout << "The message is: " << msg.serialize() <<
+        std::endl; std::cout << "I have " << entries.size() << " entry" <<
+        std::endl;*/
 
         // Reply false if term < currentTerm (§5.1)
         if (msg.term < current_term)
@@ -333,6 +339,7 @@ void RaftServer::receive(RpcAppendEntries &msg)
             // different terms), delete the existing entry and all that follow
             // it
             // Append any new entries not already in the log
+            bool found_valid_entry = false;
             for (size_t i = 0; i < msg.entries.size(); i++)
             {
                 // std::cout << "entries[msg.prev_log_index + i].term: "
@@ -340,14 +347,19 @@ void RaftServer::receive(RpcAppendEntries &msg)
                 //           std::endl;
                 // std::cout << "msg.entries[i].term: " << msg.entries[i].term
                 //           << std::endl;
-                if (entries[msg.prev_log_index + i].term != msg.entries[i].term)
+                found_valid_entry |= msg.prev_log_index + i < entries.size();
+                if (!found_valid_entry
+                    && entries[msg.prev_log_index + i].term
+                        != msg.entries[i].term)
                 {
                     // std::cout << "before erase in raft server.cc" <<
                     // std::endl;
                     entries.erase(entries.begin() + msg.prev_log_index + i,
                                   entries.end());
-                    // std::cout << "after erase in raft server.cc" <<
-                    // std::endl;
+                    found_valid_entry = true;
+                }
+                if (found_valid_entry)
+                {
                     entries.push_back(msg.entries[i]);
                 }
             }
@@ -414,6 +426,9 @@ void RaftServer::receive(RpcAppendEntriesResponse &msg)
             return;
         if (msg.success)
         {
+            std::cout << std::endl
+                      << "Commit to server " << msg.sender_rank
+                      << " is a success" << std::endl;
             match_index[msg.sender_rank - 1] += 1;
             next_index[msg.sender_rank - 1] =
                 match_index[msg.sender_rank - 1] + 1;
@@ -423,7 +438,8 @@ void RaftServer::receive(RpcAppendEntriesResponse &msg)
         {
             // decrement nextIndex and retry (fails due to log inconsistency)
             next_index[msg.sender_rank - 1] = std::max(
-                0, next_index[msg.sender_rank - 1] - 1); // Ensure next_index >= 0
+                0,
+                next_index[msg.sender_rank - 1] - 1); // Ensure next_index >= 0
 
             auto new_msg = RpcAppendEntries(
                 msg.sender_rank, uid, current_term, uid,
