@@ -17,6 +17,11 @@ void ReplSpeed::accept(Processus &process)
     process.receive(*this);
 }
 
+void ReplRecovery::accept(Processus &process)
+{
+    process.receive(*this);
+}
+
 void RpcMessage::accept(Processus &process)
 {
     process.receive(*this);
@@ -91,6 +96,13 @@ std::string ReplStart::serialize() const
 }
 
 std::string ReplSpeed::serialize() const
+{
+    json j = *this;
+    
+    return j.dump();
+}
+
+std::string ReplRecovery::serialize() const
 {
     json j = *this;
     
@@ -178,6 +190,8 @@ std::unique_ptr<Message> Message::deserialize(const json &j)
         return std::make_unique<ReplSpeed>(j.get<ReplSpeed>());
     case MessageType::REPL_START:
         return std::make_unique<ReplStart>(j.get<ReplStart>());
+    case MessageType::REPL_RECOVERY:
+        return std::make_unique<ReplRecovery>(j.get<ReplRecovery>());
     case MessageType::RPC_REQUEST_VOTE:
         return std::make_unique<RpcRequestVote>(j.get<RpcRequestVote>());
     case MessageType::RPC_APPEND_ENTRIES:

@@ -20,6 +20,7 @@ enum class MessageType
     REPL_CRASH = 0,
     REPL_SPEED,
     REPL_START,
+    REPL_RECOVERY,
     RPC_REQUEST_VOTE,
     RPC_APPEND_ENTRIES,
     RPC_VOTE_RESPONSE,
@@ -41,6 +42,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
         { MessageType::REPL_CRASH, "REPL_CRASH" },
         { MessageType::REPL_SPEED, "REPL_SPEED" },
         { MessageType::REPL_START, "REPL_START" },
+        { MessageType::REPL_RECOVERY, "REPL_RECOVERY" },
         { MessageType::RPC_REQUEST_VOTE, "RPC_REQUEST_VOTE" },
         { MessageType::RPC_APPEND_ENTRIES, "RPC_APPEND_ENTRIES" },
         { MessageType::RPC_VOTE_RESPONSE, "RPC_VOTE_RESPONSE" },
@@ -230,6 +232,20 @@ public:
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplSpeed, type, sender_rank,
                                     target_rank, speed)
+    
+class ReplRecovery: public Message
+{
+public:
+    ReplRecovery()
+        : Message(MessageType::REPL_RECOVERY){};
+    ReplRecovery(int target_rank, int sender_rank)
+        : Message(MessageType::REPL_RECOVERY, target_rank, sender_rank){};
+
+    virtual std::string serialize() const override;
+    void accept(Processus &process) override;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ReplRecovery, type, sender_rank, target_rank);
 
 /*
 **  Class RpcMessage

@@ -127,8 +127,15 @@ void InternProcessus::receive(ReplStart &msg)
     send(HandshakeSuccess(msg.sender_rank, uid));
 }
 
+void InternProcessus::receive(ReplRecovery &msg)
+{
+    std::cout << "Processus(" << uid << ") is coming back from the dead" << std::endl;
+    crashed = false;
+    send(HandshakeSuccess(msg.sender_rank, uid));
+}
+
 void InternProcessus::receive(RpcMessage &msg)
 {
-    std::cout << "Processus(" << uid << ") is starting" << std::endl;
+    //std::cout << "Processus(" << uid << ") is starting" << std::endl;
     send(HandshakeSuccess(msg.sender_rank, uid));
 }

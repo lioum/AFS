@@ -16,7 +16,7 @@ void REPL::work()
     std::string input;
     if (!waiting_for_handshake && !std::cin.eof())
     {
-        std::cerr << "REPL{" << uid << "} (START / CRASH / LOAD / DELETE)$ ";
+        std::cerr << "REPL{" << uid << "} (START / CRASH / LOAD / DELETE / RECOVERY)$ ";
         std::cin >> input;
         std::shared_ptr<Message> repl_command = process_message(input);
 
@@ -115,6 +115,21 @@ std::shared_ptr<Message> REPL::process_message(const std::string &input)
             return nullptr;
         }
         return std::make_shared<ReplStart>(target_rank, uid);
+    }
+    else if (input == "RECOVERY")
+    {
+        std::cerr << "REPL: Recovery Which one ? ";
+        std::cin >> res;
+        try
+        {
+            target_rank = std::stoi(res);
+        }
+        catch (std::invalid_argument &e)
+        {
+            std::cerr << "REPL: Invalid rank" << std::endl;
+            return nullptr;
+        }
+        return std::make_shared<ReplRecovery>(target_rank, uid);
     }
     return nullptr;
 }

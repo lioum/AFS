@@ -81,6 +81,7 @@ public:
     virtual void receive(ReplCrash &){};
     virtual void receive(ReplSpeed &){};
     virtual void receive(ReplStart &){};
+    virtual void receive(ReplRecovery &){};
     virtual void receive(RpcMessage &){};
     virtual void receive(MeNotLeader &){};
     virtual void receive(SuccessLoad &){};
@@ -113,6 +114,7 @@ public:
     virtual void receive(ReplCrash &msg) override;
     virtual void receive(ReplSpeed &msg) override;
     virtual void receive(ReplStart &msg) override;
+    virtual void receive(ReplRecovery &msg) override;
 
     /*
     ** execute Abstract Function
