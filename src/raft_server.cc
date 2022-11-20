@@ -128,8 +128,9 @@ void RaftServer::start_election()
 {
     current_term++;
     std::cout << std::endl
-              << "Starting election (" << uid << ") "
-              << "my new term is " << current_term << std::endl;
+              << "Starting election (" << uid << ") because my timeout is "
+              << std::chrono::duration_cast<milliseconds>(election_timeout)
+              << ", my new term is " << current_term << std::endl;
 
     vote_count = 1;
     voted_for = uid;
@@ -210,29 +211,11 @@ void RaftServer::apply_leader_rules()
         heartbeat_timeout = 30ms;
     }
 
-    //
-    // if there exists an N such that N > commitIndex, a majority of
-    // matchIndex[i] >= N, and log[N].term == currentTerm: MES COUILLES AU
-    // BORD DE L EAU, ça fait un radeau.
-    // TODO
-    // Code Nathan
-    // let mut match_indices = leader.match_index.clone();
-    //                 match_indices[self.id] = self.entries.len();
-    //                 match_indices.sort();
-    //                 let new_commit_index =
-    //                 match_indices[self.senders.len() / 2];
-
-    //                 if new_commit_index > self.state.commit_index
-    //                     && self.entries[new_commit_index - 1].term ==
-    //                     self.current_term
-    //                 {
-    //                     self.state.commit_index = new_commit_index;
-    //                 }
     int n = commit_index + 1;
-    int count = 0;
+    int count = 1;
     for (int i = 1; i <= nb_servers; i++)
     {
-        if (match_index[i - 1] >= n)
+        if (match_index[i - 1] >= n && i != uid)
             count++;
     }
     if (2 * count > nb_servers && (size_t)n < entries.size())
@@ -277,6 +260,10 @@ void RaftServer::receive(RpcMessage &msg)
         return;
 
     election_timeout = random_election_timeout();
+    if (role == Role::FOLLOWER)
+        std::cerr << "\r" << uid
+                << ": New heartbeat received, my election timeout is: "
+                << std::chrono::duration_cast<milliseconds>(election_timeout);
 
     // on receive message
     if (msg.term > current_term)
@@ -368,12 +355,7 @@ void RaftServer::receive(RpcAppendEntries &msg)
                 show_entries(entries);
                 std::cerr << std::endl;
             }
-            else
-                std::cerr
-                    << "\r" << uid
-                    << ": New heartbeat received, my election timeout is: "
-                    << std::chrono::duration_cast<milliseconds>(
-                           election_timeout);
+        
             // If an existing entry conflicts with a new one (same index but
             // different terms), delete the existing entry and all that follow
             // it
