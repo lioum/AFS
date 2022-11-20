@@ -49,6 +49,7 @@ public:
     void receive(HandshakeSuccess &msg) override;
 
     void receive(ClientRequest &msg) override;
+    void receive(ReplRecovery &msg) override;
 
     virtual void execute(Delete &) override;
     virtual void execute(Load &) override;

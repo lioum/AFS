@@ -9,8 +9,6 @@
 #include "message.hh"
 #include "utils.hh"
 
-// const milliseconds RaftServer::heartbeat = 30ms;
-
 // Raft timeout is between 150 and 300 ms in the reference paper
 nanoseconds random_election_timeout()
 {
@@ -243,6 +241,9 @@ void RaftServer::apply_leader_rules()
 
 void RaftServer::receive(ClientRequest &msg)
 {
+    if (crashed)
+        return;
+
     if (role == Role::LEADER)
     {
         std::cerr << std::endl
@@ -521,6 +522,13 @@ void RaftServer::receive(HandshakeSuccess &)
 {
     if (crashed)
         return;
+}
+
+void RaftServer::receive(ReplRecovery &msg)
+{
+    election_timeout = random_election_timeout();
+    last_checked = std::chrono::system_clock::now();
+    InternProcessus::receive(msg);
 }
 
 void RaftServer::execute(Load &msg)

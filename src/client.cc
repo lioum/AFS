@@ -129,7 +129,7 @@ void Client::work()
         ClientRequest request(target_rank, uid, current_command);
         
         std::cerr << std::endl << "Ping: Client " << uid <<
-        " send " << request.serialize() << std::endl;
+        " send " << request.serialize() << " to " << target_rank << std::endl;
 
         //broadcast_to_servers(request);
         send(request);
