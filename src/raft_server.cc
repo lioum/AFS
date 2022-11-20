@@ -179,33 +179,32 @@ void RaftServer::apply_leader_rules()
     // Send heartbeat every 30ms ~
     if (heartbeat_timeout <= 0ms)
     {
-        // Empty message to keep connection alive
-        RpcAppendEntries heartbeat(-1, uid, current_term, uid, -1, -1,
-                                   std::vector<LogEntry>(), commit_index);
+        for (int i = 1; i <= nb_servers; i++)
+        {
+            if (i != uid)
+            {
+                // Update resumed servers whose logs are not up-to-date
+                if (get_last_log_index() >= next_index[i - 1])
+                {
+                    std::vector<LogEntry> msg_entries(
+                        entries.begin() + next_index[i - 1], entries.end());
+                    auto to_send = RpcAppendEntries(
+                        i, uid, current_term, leader_uid, next_index[i - 1],
+                        entries[next_index[i - 1]].term, msg_entries,
+                        commit_index);
 
-        broadcast_append_entries(heartbeat);
+                    send(to_send);
+                }
+                else {
+                    RpcAppendEntries heartbeat(i, uid, current_term, uid, -1, -1,
+                                   std::vector<LogEntry>(), commit_index);
+                    send(heartbeat);
+                }
+            }
+        }
         heartbeat_timeout = 30ms;
     }
 
-    for (int i = 1; i <= nb_servers; i++)
-    {
-        if (i != uid)
-        {
-            if (get_last_log_index() >= next_index[i - 1])
-            {
-                std::vector<LogEntry> msg_entries(
-                    entries.begin() + next_index[i - 1], entries.end());
-                auto to_send = RpcAppendEntries(
-                    i, uid, current_term, leader_uid, next_index[i - 1],
-                    entries[next_index[i - 1]].term, msg_entries, commit_index);
-                
-                std::cerr << std::endl << "Leader is gonna send message: " 
-                          << to_send.serialize() << std::endl;
-
-                send(to_send);
-            }
-        }
-    }
 
     //
     // if there exists an N such that N > commitIndex, a majority of
@@ -243,8 +242,17 @@ void RaftServer::receive(ClientRequest &msg)
         std::cerr << "Leader received client request: " << msg.serialize()
                   << std::endl;
 
-        // if command received from client
-        // append entry to local log
+        // if command received from client is unique, append entry to local log
+        for (size_t i = 1; i < entries.size(); i++)
+        {
+            if (entries[i].command->client_uid == msg.command->client_uid &&
+                entries[i].command->command_id == msg.command->command_id)
+            {
+                std::cerr << "Command already in log, no need to add it again."
+                          << std::endl;
+                return;
+            }
+        }
         entries.push_back(LogEntry(current_term, msg.command));
     }
     else
@@ -337,26 +345,40 @@ void RaftServer::receive(RpcAppendEntries &msg)
 
         // Reply false if term < currentTerm (§5.1)
         if (msg.term < current_term)
+        {
+            // std::cout << "###### Reply false to heartbeat" << std::endl;
             send(RpcAppendEntriesResponse(msg.leader_uid, uid, current_term,
                                           false));
+        }
 
         // Reply false if log doesn’t contain an entry at prevLogIndex
         // whose term matches prevLogTerm (§5.3)
         else if (entries[msg.prev_log_index].term != msg.prev_log_term)
+        {
+            // std::cout << "------ Reply false to heartbeat in else if with entries size:"
+            //           << entries.size()
+            //           << std::endl
+            //           << "entries[msg.prev_log_index].term: "
+            //           << entries[msg.prev_log_index].term
+            //           << std::endl;
+            // std::cout << "msg.prev_log_index: " << msg.prev_log_index << " msg.prev_log_term: " << msg.prev_log_term << std::endl;
+            // std::cout << "entries[msg.prev_log_index - 1].term: " << entries[msg.prev_log_index - 1].term
+            //           << std::endl;
             send(RpcAppendEntriesResponse(msg.leader_uid, uid, current_term,
                                           false));
+        }
 
         else
         {
             if (msg.entries.size() > 0)
             {
-                std::cerr << std::endl
-                          << std::endl
-                          << "Server " << uid
-                          << " received: " << msg.serialize() << std::endl;
-                std::cerr << std::endl << "Here are my actual logs: ";
-                show_entries(entries);
-                std::cerr << std::endl;
+                // std::cerr << std::endl
+                //           << std::endl
+                //           << "Server " << uid
+                //           << " received: " << msg.serialize() << std::endl;
+                // std::cerr << std::endl << "Here are my actual logs: ";
+                // show_entries(entries);
+                // std::cerr << std::endl;
             }
             // If an existing entry conflicts with a new one (same index but
             // different terms), delete the existing entry and all that follow
@@ -383,6 +405,9 @@ void RaftServer::receive(RpcAppendEntries &msg)
                 }
                 if (found_valid_entry)
                 {
+                    json j = msg.entries[i];
+                    std::cerr << "************************************Adding entry: " << j
+                              << std::endl;
                     entries.push_back(msg.entries[i]);
                 }
             }
@@ -397,11 +422,13 @@ void RaftServer::receive(RpcAppendEntries &msg)
 
             if (msg.entries.size() > 0)
             {
-                std::cerr << std::endl
-                          << "Here are my logs after replication: ";
-                show_entries(entries);
-                std::cerr << std::endl << std::endl;
+                // std::cerr << std::endl
+                //           << "Here are my logs after replication: ";
+                // show_entries(entries);
+                // std::cerr << std::endl << std::endl;
             }
+            
+            // std::cout << "***************************I, " << uid << ", received an heartbeat" << std::endl;
 
             // Heartbeat taken in account here
             send(RpcAppendEntriesResponse(msg.leader_uid, uid, current_term,
