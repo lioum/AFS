@@ -376,20 +376,22 @@ public:
     RpcAppendEntriesResponse()
         : RpcMessage(MessageType::RPC_APPEND_ENTRIES_RESPONSE){};
     RpcAppendEntriesResponse(int target_rank, int sender_rank, int term,
-                             bool success)
+                             bool success, int match_index)
         : RpcMessage(MessageType::RPC_APPEND_ENTRIES_RESPONSE, target_rank,
                 sender_rank, term)
         , success(success)
+        , match_index(match_index)
     {}
 
     virtual std::string serialize() const override;
     void accept(Processus& process) override;
 
     bool success;
+    int match_index;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcAppendEntriesResponse, type,
-                                sender_rank, target_rank, term, success)
+                                sender_rank, target_rank, term, success, match_index)
 
 /*
 **  Class HandshakeFailure
