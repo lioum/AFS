@@ -1,0 +1,4 @@
+LOAD commands.txt
+LIST
+APPEND commands.txt sussybaka
+LIST
