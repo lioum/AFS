@@ -20,9 +20,9 @@ void REPL::work()
         std::cin >> input;
         std::shared_ptr<Message> repl_command = process_message(input);
 
-        if (repl_command->target_rank > 0 && 
-            repl_command->target_rank <= (nb_clients + nb_servers) && 
-            repl_command != nullptr)
+        if (repl_command != nullptr &&
+            repl_command->target_rank > 0 && 
+            repl_command->target_rank <= (nb_clients + nb_servers))
         {
             send(*repl_command);
             waiting_for_handshake = true;

@@ -71,12 +71,22 @@ int RaftServer::get_prev_log_term(int rank)
     return entries[get_prev_log_index(rank)].term;
 }
 
+void RaftServer::save_logs()
+{
+    std::ofstream file(working_folder_path / "logs.txt");
+    for (auto &entry : entries)
+    {
+        file << entry.term << " " << entry.command->to_json().dump() << std::endl;
+    }
+}
+
 void RaftServer::work()
 {
     if (crashed)
         return;
     std::this_thread::sleep_for(sleeping_time);
     apply_server_rules();
+    //save_logs();
 }
 
 void RaftServer::broadcast_append_entries(RpcAppendEntries &msg)
@@ -104,11 +114,9 @@ void RaftServer::apply_server_rules()
         std::cerr << std::endl
                   << "Server " << uid << " is trying to apply entry "
                   << last_applied << std::endl;
-        entries[last_applied].command->call_execute(*this);
+        auto command = entries[last_applied].command;
+        command->call_execute(*this);
         std::cerr << "reached after call_exectue." << std::endl;
-
-        // update entries
-        // check log matching?
     }
 
     if (role == Role::LEADER)
@@ -185,9 +193,14 @@ void RaftServer::apply_leader_rules()
         {
             if (get_last_log_index() >= next_index[i - 1])
             {
+                std::vector<LogEntry> msg_entries(
+                    entries.begin() + next_index[i - 1], entries.end());
                 auto to_send = RpcAppendEntries(
-                    i, uid, current_term, uid, get_prev_log_index(i),
-                    get_prev_log_term(i), entries, commit_index);
+                    i, uid, current_term, leader_uid, next_index[i - 1],
+                    entries[next_index[i - 1]].term, msg_entries, commit_index);
+                
+                std::cerr << std::endl << "Leader is gonna send message: " 
+                          << to_send.serialize() << std::endl;
 
                 send(to_send);
             }
@@ -335,6 +348,16 @@ void RaftServer::receive(RpcAppendEntries &msg)
 
         else
         {
+            if (msg.entries.size() > 0)
+            {
+                std::cerr << std::endl
+                          << std::endl
+                          << "Server " << uid
+                          << " received: " << msg.serialize() << std::endl;
+                std::cerr << std::endl << "Here are my actual logs: ";
+                show_entries(entries);
+                std::cerr << std::endl;
+            }
             // If an existing entry conflicts with a new one (same index but
             // different terms), delete the existing entry and all that follow
             // it
@@ -347,7 +370,7 @@ void RaftServer::receive(RpcAppendEntries &msg)
                 //           std::endl;
                 // std::cout << "msg.entries[i].term: " << msg.entries[i].term
                 //           << std::endl;
-                found_valid_entry |= msg.prev_log_index + i < entries.size();
+                found_valid_entry |= msg.prev_log_index + i >= entries.size();
                 if (!found_valid_entry
                     && entries[msg.prev_log_index + i].term
                         != msg.entries[i].term)
@@ -370,6 +393,14 @@ void RaftServer::receive(RpcAppendEntries &msg)
             {
                 commit_index = std::min<int>(
                     msg.leader_commit, msg.prev_log_index + msg.entries.size());
+            }
+
+            if (msg.entries.size() > 0)
+            {
+                std::cerr << std::endl
+                          << "Here are my logs after replication: ";
+                show_entries(entries);
+                std::cerr << std::endl << std::endl;
             }
 
             // Heartbeat taken in account here
@@ -424,11 +455,10 @@ void RaftServer::receive(RpcAppendEntriesResponse &msg)
         // if receive AppendEntriesResponse from follower with success
         if (get_last_log_index() < next_index[msg.sender_rank - 1])
             return;
+        std::cout << std::endl << "Leader received commit response: " 
+                  << msg.serialize() << std::endl;
         if (msg.success)
         {
-            std::cout << std::endl
-                      << "Commit to server " << msg.sender_rank
-                      << " is a success" << std::endl;
             match_index[msg.sender_rank - 1] += 1;
             next_index[msg.sender_rank - 1] =
                 match_index[msg.sender_rank - 1] + 1;
@@ -491,7 +521,8 @@ void RaftServer::execute(Load &msg)
     custom_data["UID"] = uid;
     send(HandshakeSuccess(msg.client_uid, uid, custom_data)); */
 
-    send(SuccessLoad(msg.client_uid, uid, file_uid, filename));
+    if (role == Role::LEADER)
+        send(SuccessLoad(msg.client_uid, uid, file_uid, msg.filename));
 }
 
 void RaftServer::execute(List &msg)
@@ -510,7 +541,8 @@ void RaftServer::execute(List &msg)
     // entries.push_back(LogEntry(current_term, msg));
 
     // send(HandshakeSuccess(msg.client_uid, uid, custom_data));
-    send(SuccessList(msg.client_uid, uid, list_uids));
+    if (role == Role::LEADER)
+        send(SuccessList(msg.client_uid, uid, list_uids));
 }
 
 void RaftServer::execute(Append &msg)
@@ -526,7 +558,8 @@ void RaftServer::execute(Append &msg)
               << " to file with uid " << msg.uid << std::endl;
     // entries.push_back(LogEntry(current_term, std::make_shared<Append>(msg)));
 
-    send(HandshakeSuccess(msg.client_uid, uid));
+    if (role == Role::LEADER)
+        send(HandshakeSuccess(msg.client_uid, uid));
 }
 
 void RaftServer::execute(Delete &msg)
@@ -538,5 +571,6 @@ void RaftServer::execute(Delete &msg)
               << msg.uid << std::endl;
     // entries.push_back(LogEntry(current_term, msg));
 
-    send(HandshakeSuccess(msg.client_uid, uid));
+    if (role == Role::LEADER)
+        send(HandshakeSuccess(msg.client_uid, uid));
 }

@@ -7,10 +7,12 @@
 #include <iostream>
 
 #include "nlohmann/json.hpp"
+#include "message.hh"
 
 std::vector<std::string> split_words(std::string const &str, const char delim);
 std::stringstream chars_to_stream(char* buffer, int size);
 std::string readFileIntoString(const std::string& path);
+void show_entries(std::vector<LogEntry> entries);
 
 template <typename Enumeration>
 auto as_integer(Enumeration const value)

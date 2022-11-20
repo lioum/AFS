@@ -127,6 +127,9 @@ void Client::work()
 
         target_rank = rand() % nb_servers + 1;
         ClientRequest request(target_rank, uid, current_command);
+        
+        std::cerr << std::endl << "Ping: Client " << uid <<
+        " send " << request.serialize() << std::endl;
 
         //broadcast_to_servers(request);
         send(request);
@@ -172,6 +175,27 @@ void Client::receive(HandshakeFailure &msg)
     }
 }
 
+void Client::receive(HandshakeSuccess &msg)
+{
+    // we check if the client is still available
+    if (!started || crashed)
+    {
+        return;
+    }
+
+    // we check if the client is waiting for a message
+    if (waiting_for_handshake)
+    {
+        std::cout << "Client " << uid
+                  << " received handshake success from server "
+                  << msg.sender_rank << std::endl;
+
+        waiting_for_handshake = false;
+        // messages_index += 1;
+        current_command = load_next_command();
+    }
+}
+
 void Client::receive(MeNotLeader &msg)
 {
     if (!started || crashed)
@@ -200,8 +224,14 @@ void Client::receive(SuccessLoad &msg)
 
     if (waiting_for_handshake)
     {
+        std::cout << "Client " << uid
+                  << " received LOAD success from server "
+                  << msg.sender_rank << " the message is: "
+                  << msg.serialize() << std::endl;
+                  
         filename_to_uid[msg.file_name] = msg.file_uid;
         waiting_for_handshake = false;
+        current_command = load_next_command();
     }
 }
 
@@ -211,32 +241,14 @@ void Client::receive(SuccessList &msg)
     {
         return;
     }
-    // jsp pas quoi faire
-    msg = msg;
 
-    if (waiting_for_handshake)
-    {
-        waiting_for_handshake = false;
-    }
-}
-
-void Client::receive(HandshakeSuccess &msg)
-{
-    // we check if the client is still available
-    if (!started || crashed)
-    {
-        return;
-    }
-
-    // we check if the client is waiting for a message
     if (waiting_for_handshake)
     {
         std::cout << "Client " << uid
-                  << " received handshake success from server "
+                  << " received LIST success from server "
                   << msg.sender_rank << std::endl;
 
         waiting_for_handshake = false;
-        // messages_index += 1;
         current_command = load_next_command();
     }
 }

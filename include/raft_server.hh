@@ -102,6 +102,8 @@ protected:
     int get_last_log_term();
     int get_prev_log_index(int rank);
     int get_prev_log_term(int rank);
+
+    void save_logs();
     
     Role role;
 

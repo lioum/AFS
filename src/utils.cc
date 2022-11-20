@@ -61,3 +61,28 @@ std::string readFileIntoString(const std::string &path)
     return std::string((std::istreambuf_iterator<char>(input_file)),
                        std::istreambuf_iterator<char>());
 }
+
+std::string serialize_command(std::shared_ptr<Command> cmd)
+{
+    if (cmd == nullptr)
+        return "nullptr";
+    return cmd->to_json().dump();
+}
+
+// Debug func to show entries
+void show_entries(std::vector<LogEntry> entries)
+{
+    std::cerr << "{";
+    for (size_t i = 0; i < entries.size(); i++)
+    {
+        if (i + 1 < entries.size())
+            std::cerr << "{term: " << entries[i].term
+                      << ", command: " << serialize_command(entries[i].command)
+                      << "}, ";
+        else
+            std::cerr << "{term: " << entries[i].term
+                      << ", command: " << serialize_command(entries[i].command)
+                      << "}";
+    }
+    std::cerr << "}";
+}
