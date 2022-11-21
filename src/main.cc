@@ -38,7 +38,7 @@ int main (int argc, char *argv[])
     else
     {
         //std::cout << rank << ": I'm a client" << std::endl;
-        Client client = Client(MPI_COMM_WORLD, nb_clients, "client_folders", "commands.txt");
+        Client client = Client(MPI_COMM_WORLD, nb_servers, "client_folders", "commands.txt");
         client.run();
     }
     MPI_Finalize();

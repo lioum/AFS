@@ -126,7 +126,6 @@ public:
     virtual void execute(Load &){};
     virtual void execute(Append &){};
     virtual void execute(List &){};
-    virtual void execute(ClientDelete &){};
 
 protected:
     bool crashed;

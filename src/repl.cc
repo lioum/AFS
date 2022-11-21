@@ -16,7 +16,7 @@ void REPL::work()
     std::string input;
     if (!waiting_for_handshake && !std::cin.eof())
     {
-        std::cerr << "REPL{" << uid << "} (START / CRASH / LOAD / DELETE / RECOVERY)$ ";
+        std::cerr << "REPL{" << uid << "} (START / CRASH / SPEED / RECOVERY)$ ";
         std::cin >> input;
         std::shared_ptr<Message> repl_command = process_message(input);
 
@@ -67,6 +67,11 @@ std::shared_ptr<Message> REPL::process_message(const std::string &input)
             std::cerr << "REPL: Invalid rank" << std::endl;
             return nullptr;
         }
+        if (target_rank == 0 || target_rank > nb_servers + nb_clients)
+        {
+            std::cerr << "Please select a processus between 1 and " << nb_servers + nb_clients << std::endl;
+            return nullptr;
+        }
         return std::make_shared<ReplCrash>(target_rank, uid);
     }
     else if (input == "SPEED")
@@ -80,6 +85,11 @@ std::shared_ptr<Message> REPL::process_message(const std::string &input)
         catch (std::invalid_argument &e)
         {
             std::cerr << "REPL: Invalid rank" << std::endl;
+            return nullptr;
+        }
+        if (target_rank == 0 || target_rank > nb_servers + nb_clients)
+        {
+            std::cerr << "Please select a processus between 1 and " << nb_servers + nb_clients << std::endl;
             return nullptr;
         }
         std::string speed_str;
@@ -114,6 +124,11 @@ std::shared_ptr<Message> REPL::process_message(const std::string &input)
             std::cerr << "REPL: Invalid rank" << std::endl;
             return nullptr;
         }
+        if (target_rank == 0 || target_rank > nb_servers + nb_clients)
+        {
+            std::cerr << "Please select a processus between 1 and " << nb_servers + nb_clients << std::endl;
+            return nullptr;
+        }
         return std::make_shared<ReplStart>(target_rank, uid);
     }
     else if (input == "RECOVERY")
@@ -127,6 +142,11 @@ std::shared_ptr<Message> REPL::process_message(const std::string &input)
         catch (std::invalid_argument &e)
         {
             std::cerr << "REPL: Invalid rank" << std::endl;
+            return nullptr;
+        }
+        if (target_rank == 0 || target_rank > nb_servers + nb_clients)
+        {
+            std::cerr << "Please select a processus between 1 and " << nb_servers + nb_clients << std::endl;
             return nullptr;
         }
         return std::make_shared<ReplRecovery>(target_rank, uid);

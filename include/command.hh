@@ -83,25 +83,6 @@ public:
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Delete, type, client_uid, command_id, type,
                                    uid)
 
-/*
-**  Class ClientDelete
-**
-**  A specific command of type CLIENT_DELETE
-*/
-class ClientDelete : public Command
-{
-public:
-    ClientDelete()
-        : Command(CommandType::CLIENT_DELETE, -1, -1){};
-    ClientDelete(int client_uid, int command_id, const std::string &filename)
-        : Command(CommandType::CLIENT_DELETE, client_uid, command_id)
-        , filename(filename){};
-
-    virtual void call_execute(InternProcessus &) override;
-    virtual nlohmann::json to_json() const override;
-
-    std::string filename;
-};
 
 /*
 **  Class List

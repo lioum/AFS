@@ -5,11 +5,6 @@ void Delete::call_execute(InternProcessus &process)
     process.execute(*this);
 }
 
-void ClientDelete::call_execute(InternProcessus &process)
-{
-    process.execute(*this);
-}
-
 void Append::call_execute(InternProcessus &process)
 {
     process.execute(*this);
@@ -43,9 +38,4 @@ nlohmann::json List::to_json() const
 nlohmann::json Delete::to_json() const
 {
     return *this;
-}
-
-nlohmann::json ClientDelete::to_json() const
-{
-    throw std::runtime_error("ClientDelete::to_json() not implemented");
 }

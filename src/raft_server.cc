@@ -71,12 +71,17 @@ int RaftServer::get_prev_log_term(int rank)
 
 void RaftServer::save_logs()
 {
-    std::ofstream file(working_folder_path / "logs.txt");
-    for (auto &entry : entries)
-    {
-        file << entry.term << " " << entry.command->to_json().dump()
-             << std::endl;
-    }
+    std::string filename = "server_folders/logs/" + std::to_string(uid) + ".logs";
+    MPI_File file;
+    MPI_File_open(MPI_COMM_SELF, filename.c_str(),
+                  MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &file);
+    json j = entries;
+    std::string content = j.dump();
+
+    MPI_File_write(file, content.c_str(), content.size(), MPI_CHAR,
+                   MPI_STATUS_IGNORE);
+    
+    MPI_File_close(&file);
 }
 
 void RaftServer::work()
@@ -85,7 +90,7 @@ void RaftServer::work()
         return;
     std::this_thread::sleep_for(sleeping_time);
     apply_server_rules();
-    // save_logs();
+    save_logs();
 }
 
 void RaftServer::broadcast_append_entries(RpcAppendEntries &msg)
@@ -262,8 +267,8 @@ void RaftServer::receive(RpcMessage &msg)
     election_timeout = random_election_timeout();
     if (role == Role::FOLLOWER)
         std::cerr << "\r" << uid
-                << ": New heartbeat received, my election timeout is: "
-                << std::chrono::duration_cast<milliseconds>(election_timeout);
+                  << ": New heartbeat received, my election timeout is: "
+                  << std::chrono::duration_cast<milliseconds>(election_timeout);
 
     // on receive message
     if (msg.term > current_term)
@@ -355,7 +360,7 @@ void RaftServer::receive(RpcAppendEntries &msg)
                 show_entries(entries);
                 std::cerr << std::endl;
             }
-        
+
             // If an existing entry conflicts with a new one (same index but
             // different terms), delete the existing entry and all that follow
             // it
@@ -472,15 +477,21 @@ void RaftServer::receive(RpcAppendEntriesResponse &msg)
         {
             // decrement nextIndex and retry (fails due to log inconsistency)
             next_index[msg.sender_rank - 1] = std::max(
-                0,
+                match_index[msg.sender_rank - 1],
                 next_index[msg.sender_rank - 1] - 1); // Ensure next_index >= 0
+
+            std::vector<LogEntry> msg_entries(
+                entries.begin() + next_index[msg.sender_rank - 1],
+                entries.end());
 
             auto new_msg = RpcAppendEntries(
                 msg.sender_rank, uid, current_term, uid,
                 get_prev_log_index(msg.sender_rank),
-                get_prev_log_term(msg.sender_rank), entries, commit_index);
+                get_prev_log_term(msg.sender_rank), msg_entries, commit_index);
 
-            std::cerr << "This message is the mark of a failure. Leader is now "
+            std::cerr << "This message is the mark of a failure: "
+                      << msg.serialize()
+                      << std::endl << "Leader is now "
                          "gonna send message: "
                       << new_msg.serialize() << std::endl;
             send(new_msg);
@@ -562,15 +573,29 @@ void RaftServer::execute(List &msg)
 void RaftServer::execute(Append &msg)
 {
     MPI_File file;
-    MPI_File_open(MPI_COMM_SELF, uids[msg.uid].c_str(), MPI_MODE_APPEND,
-                  MPI_INFO_NULL, &file);
-    MPI_File_write(file, msg.content.c_str(), msg.content.size(), MPI_CHAR,
-                   MPI_STATUS_IGNORE);
+    // MPI_File_open(MPI_COMM_SELF, uids[msg.uid].c_str(), MPI_MODE_APPEND,
+    //               MPI_INFO_NULL, &file);
+    //               
+    auto filepath = uids[msg.uid];
+
+    std::cout << "filepath pour append: " << filepath  << std::endl;
+    if(MPI_File_open(MPI_COMM_SELF, filepath.c_str(), MPI_MODE_APPEND | MPI_MODE_WRONLY,
+                  MPI_INFO_NULL, &file) != MPI_SUCCESS)
+    {
+        std::cerr << "[MPI process " << uids[msg.uid] << "] Failure in opening the file.\n";
+    }
+
+    // MPI_File_write(file, msg.content.c_str(), msg.content.size(), MPI_CHAR,
+    //                MPI_STATUS_IGNORE);
+    if(MPI_File_write(file, msg.content.c_str(), msg.content.size(), MPI_CHAR,
+                   MPI_STATUS_IGNORE) != MPI_SUCCESS)
+    {
+        std::cerr << "[MPI process " << uids[msg.uid] << "] Failure in writing to the file.\n";
+    }
     MPI_File_close(&file);
 
     std::cout << "RaftServer(" << uid << ") is adding " << msg.content
               << " to file with uid " << msg.uid << std::endl;
-    // entries.push_back(LogEntry(current_term, std::make_shared<Append>(msg)));
 
     if (role == Role::LEADER)
         send(HandshakeSuccess(msg.client_uid, uid));
