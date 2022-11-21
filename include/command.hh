@@ -3,7 +3,7 @@
 
 #include "nlohmann/json.hpp"
 
-class InternProcessus;
+class RaftServer;
 
 /*
 ** enum of possible command accepted
@@ -50,9 +50,9 @@ public:
     /*
     ** call_execute Function
     **
-    ** Call the right execute function from the InterProcessus Class
+    ** Call the right execute function from the InternProcessus Class
     */
-    virtual void call_execute(InternProcessus &) = 0;
+    virtual void call_execute(RaftServer &) = 0;
     virtual nlohmann::json to_json() const = 0;
 
     CommandType type;
@@ -74,7 +74,7 @@ public:
         : Command(CommandType::DELETE, client_uid, command_id)
         , uid(uid){};
 
-    virtual void call_execute(InternProcessus &) override;
+    virtual void call_execute(RaftServer &) override;
     virtual nlohmann::json to_json() const override;
 
     int uid;
@@ -97,7 +97,7 @@ public:
     List(int client_uid, int command_id)
         : Command(CommandType::LIST, client_uid, command_id){};
 
-    virtual void call_execute(InternProcessus &) override;
+    virtual void call_execute(RaftServer &) override;
     virtual nlohmann::json to_json() const override;
 };
 
@@ -118,7 +118,7 @@ public:
         , uid(uid)
         , content(content){};
 
-    virtual void call_execute(InternProcessus &) override;
+    virtual void call_execute(RaftServer &) override;
     virtual nlohmann::json to_json() const override;
 
     int uid;
@@ -144,7 +144,7 @@ public:
         , filename(filename)
         , content(content){};
 
-    virtual void call_execute(InternProcessus &) override;
+    virtual void call_execute(RaftServer &) override;
     virtual nlohmann::json to_json() const override;
 
     std::string filename;

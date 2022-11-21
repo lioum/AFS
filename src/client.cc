@@ -5,6 +5,8 @@
 
 #include "utils.hh"
 
+// Reads a line from the file containing the commands and processes it as a
+// Command object.
 std::unique_ptr<Command> Client::load_next_command()
 {
     // Parsing of the current command file that we previously receive or decided
@@ -15,15 +17,12 @@ std::unique_ptr<Command> Client::load_next_command()
     {
         std::vector<std::string> inline_words = split_words(line, ' ');
 
-        // std::cout << "exit while with target_alive: " << client.target_rank
-        //           << std::endl;
-
         if (inline_words[0] == "LOAD")
         {
             if (inline_words.size() < 2)
             {
-                std::cout << "Command file of Client(" << uid << "): "
-                          << "Filename required after LOAD" << std::endl;
+                std::cerr << client_str << " Filename required after LOAD"
+                          << std::endl;
 
                 throw std::runtime_error("Failed to parse command file");
             }
@@ -38,8 +37,8 @@ std::unique_ptr<Command> Client::load_next_command()
         {
             if (inline_words.size() > 1)
             {
-                std::cout << "Command file of Client(" << uid << "): "
-                          << "No text required after LIST" << std::endl;
+                std::cerr << client_str << " No text required after LIST"
+                          << std::endl;
                 throw std::runtime_error("Failed to parse command file");
             }
 
@@ -49,40 +48,43 @@ std::unique_ptr<Command> Client::load_next_command()
         {
             if (inline_words.size() < 3)
             {
-                std::cout << "Command file of Client(" << uid << "): "
-                          << "UID of file and content required after APPEND"
-                          << std::endl;
+                std::cerr
+                    << client_str
+                    << " UID of file and content are both required after APPEND"
+                    << std::endl;
                 throw std::runtime_error("Failed to parse command file");
             }
 
-            try {
+            try
+            {
                 auto uid_file = filename_to_uid.at(inline_words[1]);
                 return std::make_unique<Append>(uid, command_index++, uid_file,
                                                 inline_words[2]);
             }
             catch (std::exception &error)
             {
-                std::cerr << "File " << inline_words[1] 
-                << " is not loaded (in APPEND command)" << std::endl;  
+                std::cerr << client_str << " File " << inline_words[1]
+                          << " is not loaded (in APPEND command)" << std::endl;
             }
         }
         else if (inline_words[0] == "DELETE")
         {
             if (inline_words.size() < 2)
             {
-                std::cout << "Command file of Client(" << uid << "): "
-                          << "UID of file required after DELETE" << std::endl;
+                std::cerr << client_str << " UID of file required after DELETE"
+                          << std::endl;
                 throw std::runtime_error("Failed to parse command file");
             }
 
-            try {
+            try
+            {
                 auto uid_file = filename_to_uid.at(inline_words[1]);
                 return std::make_unique<Delete>(uid, command_index++, uid_file);
             }
             catch (std::exception &error)
             {
-                std::cerr << "File " << inline_words[1] 
-                << " is not loaded (in DELETE command)" << std::endl;  
+                std::cerr << client_str << " File " << inline_words[1]
+                          << " is not loaded (in DELETE command)" << std::endl;
             }
         }
     }
@@ -90,10 +92,9 @@ std::unique_ptr<Command> Client::load_next_command()
     return nullptr;
 }
 
-Client::Client(
-    MPI_Comm com, int nb_servers, const std::filesystem::path &root_folder_path,
-    const std::filesystem::path &command_file_path)
-    : InternProcessus(com, nb_servers, root_folder_path)
+Client::Client(int nb_servers, const std::filesystem::path &root_folder_path,
+               const std::filesystem::path &command_file_path)
+    : InternProcessus(nb_servers, root_folder_path)
 {
     auto command_file_real_path = command_file_path.is_relative()
         ? working_folder_path / command_file_path
@@ -105,6 +106,7 @@ Client::Client(
         throw std::runtime_error("Could not open command file");
 
     current_command = load_next_command();
+    client_str = "[Client " + std::to_string(uid) + "]";
 }
 
 void Client::work()
@@ -113,25 +115,21 @@ void Client::work()
     if (!started || crashed || current_command == nullptr)
         return;
 
-    std::chrono::milliseconds now = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::system_clock::now().time_since_epoch());
-    //auto now = std::chrono::system_clock::now();
+    std::chrono::milliseconds now =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch());
 
     // Looking for new leader
     if (now > handshake_timeout_till)
     {
-        std::cout << "Client " << uid
+        std::cerr << client_str
                   << " timed out waiting for handshake from server "
                   << target_rank << std::endl;
-        // const auto &cmd = commands.at(messages_index);
 
         target_rank = rand() % nb_servers + 1;
         ClientRequest request(target_rank, uid, current_command);
-        
-        std::cerr << std::endl << "Ping: Client " << uid <<
-        " send " << request.serialize() << " to " << target_rank << std::endl;
 
-        //broadcast_to_servers(request);
+        // broadcast_to_servers(request);
         send(request);
         waiting_for_handshake = true;
         handshake_timeout_till = now + handshake_timeout;
@@ -140,12 +138,8 @@ void Client::work()
     // Client ready to send a message
     if (!waiting_for_handshake)
     {
-        // const auto &cmd = commands.at(messages_index);
         ClientRequest request(target_rank, uid, current_command);
 
-        std::cerr << std::endl << "Client " << uid <<
-        " send " << request.serialize() << std::endl;
-        
         send(request);
         waiting_for_handshake = true;
         handshake_timeout_till = now + handshake_timeout;
@@ -168,8 +162,7 @@ void Client::receive(HandshakeFailure &msg)
     // we check if the client is waiting for a message
     if (waiting_for_handshake)
     {
-        std::cout << "Client " << uid
-                  << " received handshake failure from server "
+        std::cerr << client_str << " received handshake failure from server "
                   << msg.sender_rank << std::endl;
         waiting_for_handshake = false;
     }
@@ -186,12 +179,10 @@ void Client::receive(HandshakeSuccess &msg)
     // we check if the client is waiting for a message
     if (waiting_for_handshake)
     {
-        std::cout << "Client " << uid
-                  << " received handshake success from server "
+        std::cerr << client_str << " received handshake success from server "
                   << msg.sender_rank << std::endl;
 
         waiting_for_handshake = false;
-        // messages_index += 1;
         current_command = load_next_command();
     }
 }
@@ -205,10 +196,8 @@ void Client::receive(MeNotLeader &msg)
 
     if (waiting_for_handshake)
     {
-        std::cout << "Client " << uid << " received MeNotLeader from server "
-                  << msg.sender_rank << std::endl;
-        std::cout << "Client " << uid << " will use server " << msg.leader_uid
-                  << " instead of " << target_rank << " as target server"
+        std::cerr << client_str << " Received MeNotLeader redirecting to "
+                  << msg.leader_uid << " from server " << msg.sender_rank
                   << std::endl;
         target_rank = msg.leader_uid;
         waiting_for_handshake = false;
@@ -224,11 +213,9 @@ void Client::receive(SuccessLoad &msg)
 
     if (waiting_for_handshake)
     {
-        std::cout << "Client " << uid
-                  << " received LOAD success from server "
-                  << msg.sender_rank << " the message is: "
-                  << msg.serialize() << std::endl;
-                  
+        std::cerr << client_str << " received LOAD success from server "
+                  << msg.sender_rank << std::endl;
+
         filename_to_uid[msg.file_name] = msg.file_uid;
         waiting_for_handshake = false;
         current_command = load_next_command();
@@ -244,8 +231,7 @@ void Client::receive(SuccessList &msg)
 
     if (waiting_for_handshake)
     {
-        std::cout << "Client " << uid
-                  << " received LIST success from server "
+        std::cerr << client_str << " received LIST success from server "
                   << msg.sender_rank << std::endl;
 
         waiting_for_handshake = false;

@@ -6,11 +6,13 @@
 #include <mpi.h>
 #include <optional>
 
-REPL::REPL(MPI_Comm com, int nb_servers, int nb_clients)
-    : Processus(com, nb_servers)
+REPL::REPL(int nb_servers, int nb_clients)
+    : Processus(nb_servers)
     , nb_clients(nb_clients)
 {}
 
+
+// Asks for an input from the User and send the message to a processus
 void REPL::work()
 {
     std::string input;
@@ -20,9 +22,7 @@ void REPL::work()
         std::cin >> input;
         std::shared_ptr<Message> repl_command = process_message(input);
 
-        if (repl_command != nullptr &&
-            repl_command->target_rank > 0 && 
-            repl_command->target_rank <= (nb_clients + nb_servers))
+        if (repl_command != nullptr)
         {
             send(*repl_command);
             waiting_for_handshake = true;
@@ -50,6 +50,8 @@ void REPL::receive(HandshakeSuccess &msg)
     }
 }
 
+// Parses the input from the user in stdin and returns a message
+// returns nullptr if the input is not valid
 std::shared_ptr<Message> REPL::process_message(const std::string &input)
 {
     std::string res;

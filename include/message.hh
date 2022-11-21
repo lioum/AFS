@@ -299,8 +299,8 @@ public:
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RpcRequestVote, type, sender_rank,
-                                   target_rank, term, last_log_index,
-                                   last_log_term)
+                                   target_rank, term, candidate_uid,
+                                   last_log_index, last_log_term)
 
 /*
 **  Class RpcAppendEntries

@@ -24,10 +24,9 @@ public:
     /*
     ** Constructor
     **
-    ** @MPI_Comm com : the communicator provided by MPI that contains all MPI processes
     ** @int nb_servers : the number of servers
     */
-    Processus(MPI_Comm com, int nb_servers);
+    Processus(int nb_servers);
 
     /*
     ** listen Function
@@ -62,14 +61,14 @@ public:
     /*
     ** work Abstract Function
     **
-    ** the objectiv is to send the message to clients or servers 
+    ** the objective is to send the message to clients or servers 
     */
     virtual void work() = 0;
 
     /*
     ** receive Abstract Function
     **
-    ** the objectiv is to receive a message of a specific type
+    ** the objective is to receive a message of a specific type
     */
     virtual void receive(RpcRequestVote &){};
     virtual void receive(RpcAppendEntries &){};
@@ -87,8 +86,6 @@ public:
     virtual void receive(SuccessLoad &){};
     virtual void receive(SuccessList &){};
 
-    MPI_Comm com;
-
 protected:
     int uid; // MPI rank
     int nb_servers; // MPI size
@@ -102,13 +99,13 @@ protected:
 class InternProcessus : public Processus
 {
 public:
-    InternProcessus(MPI_Comm com, int nb_servers,
+    InternProcessus(int nb_servers,
                     const std::filesystem::path &root_folder_path);
 
     /*
     ** receive Abstract Function
     **
-    ** the objectiv is to receive a message of a specific type
+    ** the objective is to receive a message of a specific type
     */
     virtual void receive(RpcMessage &msg) override;
     virtual void receive(ReplCrash &msg) override;
@@ -116,22 +113,13 @@ public:
     virtual void receive(ReplStart &msg) override;
     virtual void receive(ReplRecovery &msg) override;
 
-    /*
-    ** execute Abstract Function
-    **
-    ** the objectiv is to execute a command of a specific type
-    */
-    virtual void execute(Command &){};
-    virtual void execute(Delete &){};
-    virtual void execute(Load &){};
-    virtual void execute(Append &){};
-    virtual void execute(List &){};
-
 protected:
+    // Attributes for interaction with REPL
     bool crashed;
     bool started;
     Speed speed;
     nanoseconds sleeping_time;
 
+    // Path of server files
     std::filesystem::path working_folder_path;
 };

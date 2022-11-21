@@ -1,13 +1,13 @@
 #include "utils.hh"
 
-/*
-** split_words Function
-**
-** @std::string const &str : string to be splited
-** @const char delim : delimiter
-**
-** A simple split following a given delimiter
-*/
+nanoseconds random_election_timeout()
+{
+    std::random_device rd;
+    std::uniform_int_distribution<long int> dist(150 * 10e5, 300 * 10e5);
+
+    return nanoseconds(dist(rd));
+}
+
 std::vector<std::string> split_words(std::string const &str, const char delim)
 {
     std::vector<std::string> inline_words;
@@ -21,14 +21,6 @@ std::vector<std::string> split_words(std::string const &str, const char delim)
     return inline_words;
 }
 
-/*
-** chars_to_stream Function
-**
-** @char* buffer : data to be converted
-** @int size : size of the buffer
-**
-** Convert a given buffer into a stringstream
-*/
 std::stringstream chars_to_stream(char *buffer, int size)
 {
     std::stringstream ss("");
@@ -43,13 +35,6 @@ std::stringstream chars_to_stream(char *buffer, int size)
     return ss;
 }
 
-/*
-** readFileIntoString Function
-**
-** @std::string &path : file to be readed
-**
-** Read a file and convert it to string
-*/
 std::string readFileIntoString(const std::string &path)
 {
     std::ifstream input_file(path);
@@ -69,20 +54,21 @@ std::string serialize_command(std::shared_ptr<Command> cmd)
     return cmd->to_json().dump();
 }
 
-// Debug func to show entries
 void show_entries(std::vector<LogEntry> entries)
 {
     std::cerr << "{";
     for (size_t i = 0; i < entries.size(); i++)
     {
-        if (i + 1 < entries.size())
-            std::cerr << "{term: " << entries[i].term
-                      << ", command: " << serialize_command(entries[i].command)
-                      << "}, ";
+        std::cerr << "{term: " << entries[i].term << ", command: ";
+        if (entries[i].command == nullptr)
+            std::cerr << "null";
         else
-            std::cerr << "{term: " << entries[i].term
-                      << ", command: " << serialize_command(entries[i].command)
-                      << "}";
+            std::cerr << entries[i].command->to_json()["type"];
+
+        if (i + 1 < entries.size())
+            std::cerr << "}, ";
+        else
+            std::cerr << "}";
     }
     std::cerr << "}";
 }

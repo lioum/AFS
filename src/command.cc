@@ -1,21 +1,21 @@
-#include "processus.hh"
+#include "raft_server.hh"
 
-void Delete::call_execute(InternProcessus &process)
+void Delete::call_execute(RaftServer &process)
 {
     process.execute(*this);
 }
 
-void Append::call_execute(InternProcessus &process)
+void Append::call_execute(RaftServer &process)
 {
     process.execute(*this);
 }
 
-void List::call_execute(InternProcessus &process)
+void List::call_execute(RaftServer &process)
 {
     process.execute(*this);
 }
 
-void Load::call_execute(InternProcessus &process)
+void Load::call_execute(RaftServer &process)
 {
     process.execute(*this);
 }

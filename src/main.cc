@@ -26,19 +26,19 @@ int main (int argc, char *argv[])
     if (rank == 0)
     {
         //std::cout << rank << ": I'm the REPL" << std::endl;
-        REPL repl(MPI_COMM_WORLD, nb_servers, nb_clients);
+        REPL repl(nb_servers, nb_clients);
         repl.run();
     }
     else if (rank < nb_servers + 1)
     {
         //std::cout << rank << ": I'm a server" << std::endl;
-        RaftServer server(MPI_COMM_WORLD, nb_servers, "server_folders");
+        RaftServer server(nb_servers, "server_folders");
         server.run();
     }
     else
     {
         //std::cout << rank << ": I'm a client" << std::endl;
-        Client client = Client(MPI_COMM_WORLD, nb_servers, "client_folders", "commands.txt");
+        Client client(nb_servers, "client_folders", "commands.txt");
         client.run();
     }
     MPI_Finalize();

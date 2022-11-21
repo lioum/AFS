@@ -13,12 +13,11 @@ class REPL : public Processus
 {
 public:
     /*
-    ** Constrcutor
+    ** Constructor
     **
-    ** @MPI_Comm com : the communicator provided by MPI that contains all MPI processes
     ** @int nb_servers : the number of servers
     */
-    REPL(MPI_Comm com, int nb_servers, int nb_clients);
+    REPL(int nb_servers, int nb_clients);
 
     /*
     ** work Function

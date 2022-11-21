@@ -15,13 +15,11 @@ public:
     /*
     ** Constructor
     **
-    ** @MPI_Comm com : the communicator provided by MPI that contains all MPI
-    *processes
     ** @int nb_servers : the number of servers
     ** @std::filesystem::path &working_path : the reference the current working
     *environment for the processus
     */
-    Client(MPI_Comm com, int nb_servers,
+    Client(int nb_servers,
            const std::filesystem::path &root_folder_path,
            const std::filesystem::path &command_file_path);
     ~Client(){};
@@ -50,9 +48,7 @@ public:
 
 private:
     int command_index = 0;
-    size_t messages_index = 0;
     int target_rank = -1; // Index of the current target server
-    bool target_alive = false; // Satus of the current target server
     bool waiting_for_handshake = false; // Status of the current client
     int expected_handshake_rank = 0;
 
@@ -66,5 +62,6 @@ private:
         std::chrono::milliseconds(1000);
     std::chrono::milliseconds handshake_timeout_till =
         std::chrono::milliseconds(0);
+    std::string client_str;
     // std::vector<std::shared_ptr<Command>> commands;
 };

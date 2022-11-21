@@ -1,7 +1,6 @@
 #pragma once
 
-#include <mpi.h>
-#include <queue>
+#include <thread>
 
 #include "processus.hh"
 
@@ -30,31 +29,49 @@ public:
     /*
     ** Constructor
     **
-    ** @MPI_Comm com : the communicator provided by MPI that contains all MPI processes
     ** @int nb_servers : the number of servers
     ** @std::filesystem::path &folder_path : the reference to the folder of the processus
     */
-    RaftServer(MPI_Comm com, int nb_servers, const std::filesystem::path& root_folder_path);
+    RaftServer(int nb_servers, const std::filesystem::path& root_folder_path);
 
+    /*
+    ** Overriding work Function
+    **
+    ** the objective is to send the message to clients or servers 
+    */
     void work() override;
+
+    /*
+    ** broadcast_append_entries Function
+    **
+    ** @Message & msg : reference to the message to be broadcasted
+    ** Send the message to all the servers
+    */
     void broadcast_append_entries(RpcAppendEntries &msg);
 
+    /*
+    ** Overriding receive Functions
+    **
+    ** the objective is to receive a message of a specific type
+    */
     void receive(RpcMessage &msg) override;
     void receive(RpcRequestVote &msg) override;
     void receive(RpcAppendEntries &msg) override;
     void receive(RpcVoteResponse &msg) override;
     void receive(RpcAppendEntriesResponse &msg) override;
-
-    void receive(HandshakeFailure &msg) override;
-    void receive(HandshakeSuccess &msg) override;
-
     void receive(ClientRequest &msg) override;
     void receive(ReplRecovery &msg) override;
 
-    virtual void execute(Delete &) override;
-    virtual void execute(Load &) override;
-    virtual void execute(Append &) override;
-    virtual void execute(List &) override;
+   /*
+    ** Command Execution Functions
+    **
+    ** the objective is to apply client request according to its specific command type
+    */
+    void execute(Command &msg);
+    void execute(Delete &msg);
+    void execute(Load &msg);
+    void execute(Append &msg);
+    void execute(List &msg);
 
     /*
     ** start_election Function
@@ -76,7 +93,7 @@ public:
     /*
     ** apply_server_rules Function
     **
-    ** the leader will spread his 'authority' over others servers if he isnt timeout
+    ** the leader will spread his 'authority' over others servers if he isn't timeout
     */   
     void apply_server_rules();
     
@@ -88,19 +105,20 @@ public:
     void apply_follower_and_candidate_rules();
     
     /*
-    ** aplly_leader_rules Function
+    ** apply_leader_rules Function
     **
     ** Check if the server is the leader and give him autority accordly to his role 
     */   
     void apply_leader_rules();
 
-    // Fixed heartbeat timeout fitting the raft election timeout
 private:
     std::map<int, std::string> uids;
 
 protected:
+    // Utils fonctions to get last log index and term
     int get_last_log_index();
     int get_last_log_term();
+    // Utils fonctions for the leader to get followers last log index and term 
     int get_prev_log_index(int rank);
     int get_prev_log_term(int rank);
 
@@ -109,6 +127,7 @@ protected:
     Role role;
 
     std::vector<LogEntry> entries;
+    std::string server_str;
 
     // Election
     nanoseconds election_timeout;
@@ -128,7 +147,7 @@ protected:
     std::vector<int> next_index;
     std::vector<int> match_index;
 
-    // Fixed heartbeat timeout fitting the raft election timeout
+    // Periodic heartbeat
     constexpr static nanoseconds heartbeat = 30ms;
     nanoseconds heartbeat_timeout;
 };

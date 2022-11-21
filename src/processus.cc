@@ -5,11 +5,10 @@
 #include "repl.hh"
 #include "utils.hh"
 
-Processus::Processus(MPI_Comm com, int nb_servers)
-    : com(com)
-    , nb_servers(nb_servers)
+Processus::Processus(int nb_servers)
+    : nb_servers(nb_servers)
 {
-    MPI_Comm_rank(com, &uid);
+    MPI_Comm_rank(MPI_COMM_WORLD, &uid);
 }
 
 std::shared_ptr<Message> Processus::listen()
@@ -30,7 +29,7 @@ std::shared_ptr<Message> Processus::listen()
     // Receiving the listened message from the json in a buffer
     auto buffer = std::vector<char>(count);
     int err =
-        MPI_Recv(buffer.data(), count, MPI_CHAR, source, tag, com, &status);
+        MPI_Recv(buffer.data(), count, MPI_CHAR, source, tag, MPI_COMM_WORLD, &status);
     if (err != 0)
     {
         char *error_string =
@@ -47,7 +46,7 @@ void Processus::send(const Message &msg)
 {
     auto serialization = msg.serialize();
     int err = MPI_Send(serialization.data(), serialization.length(), MPI_CHAR,
-                       msg.target_rank, 0, com);
+                       msg.target_rank, 0, MPI_COMM_WORLD);
     
     if (err != 0)
     {
@@ -86,9 +85,9 @@ void Processus::run()
     }
 }
 
-InternProcessus::InternProcessus(MPI_Comm com, int nb_servers,
+InternProcessus::InternProcessus(int nb_servers,
                                  const std::filesystem::path &root_folder_path)
-    : Processus(com, nb_servers)
+    : Processus(nb_servers)
     , crashed(false)
     , started(false)
     , speed(Speed::FAST)
