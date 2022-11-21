@@ -57,7 +57,7 @@ std::unique_ptr<Command> Client::load_next_command()
 
             try
             {
-                auto uid_file = filename_to_uid.at(inline_words[1]);
+                auto uid_file = inline_words[1];
                 return std::make_unique<Append>(uid, command_index++, uid_file,
                                                 inline_words[2]);
             }
@@ -78,7 +78,7 @@ std::unique_ptr<Command> Client::load_next_command()
 
             try
             {
-                auto uid_file = filename_to_uid.at(inline_words[1]);
+                auto uid_file = inline_words[1];
                 return std::make_unique<Delete>(uid, command_index++, uid_file);
             }
             catch (std::exception &error)
@@ -216,7 +216,6 @@ void Client::receive(SuccessLoad &msg)
         std::cerr << client_str << " received LOAD success from server "
                   << msg.sender_rank << std::endl;
 
-        filename_to_uid[msg.file_name] = msg.file_uid;
         waiting_for_handshake = false;
         current_command = load_next_command();
     }
@@ -231,8 +230,13 @@ void Client::receive(SuccessList &msg)
 
     if (waiting_for_handshake)
     {
-        std::cerr << client_str << " received LIST success from server "
+        std::cerr << client_str << " Received LIST success from server "
                   << msg.sender_rank << std::endl;
+
+        std::cerr << client_str << " UIDs list:" << std::endl;
+
+        for (const auto &uid : msg.file_uids)
+            std::cerr << "\t- " << uid << std::endl;
 
         waiting_for_handshake = false;
         current_command = load_next_command();

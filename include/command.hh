@@ -70,14 +70,14 @@ class Delete : public Command
 public:
     Delete()
         : Command(CommandType::DELETE, -1, -1){};
-    Delete(int client_uid, int command_id, int uid)
+    Delete(int client_uid, int command_id, const std::string &uid)
         : Command(CommandType::DELETE, client_uid, command_id)
         , uid(uid){};
 
     virtual void call_execute(RaftServer &) override;
     virtual nlohmann::json to_json() const override;
 
-    int uid;
+    std::string uid;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Delete, type, client_uid, command_id, type,
@@ -113,7 +113,7 @@ class Append : public Command
 public:
     Append()
         : Command(CommandType::APPEND, -1, -1){};
-    Append(int client_uid, int command_id, int uid, const std::string &content)
+    Append(int client_uid, int command_id, const std::string &uid, const std::string &content)
         : Command(CommandType::APPEND, client_uid, command_id)
         , uid(uid)
         , content(content){};
@@ -121,7 +121,7 @@ public:
     virtual void call_execute(RaftServer &) override;
     virtual nlohmann::json to_json() const override;
 
-    int uid;
+    std::string uid;
     std::string content;
 };
 

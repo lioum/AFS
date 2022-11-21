@@ -33,6 +33,7 @@ public:
     ** @std::filesystem::path &folder_path : the reference to the folder of the processus
     */
     RaftServer(int nb_servers, const std::filesystem::path& root_folder_path);
+    virtual ~RaftServer();
 
     /*
     ** Overriding work Function
@@ -112,7 +113,8 @@ public:
     void apply_leader_rules();
 
 private:
-    std::map<int, std::string> uids;
+    // std::map<int, std::string> uids;
+    std::map<std::string, MPI_File> file_map;
 
 protected:
     // Utils fonctions to get last log index and term

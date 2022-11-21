@@ -52,7 +52,7 @@ private:
     bool waiting_for_handshake = false; // Status of the current client
     int expected_handshake_rank = 0;
 
-    std::map<std::string, int> filename_to_uid;
+    // std::map<std::string, int> filename_to_uid;
 
     std::shared_ptr<Command> current_command;
 

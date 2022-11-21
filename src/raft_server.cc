@@ -3,7 +3,17 @@
 #include "message.hh"
 #include "utils.hh"
 
+
+const std::filesystem::path LOG_ROOT_PATH = "server_folders/logs";
+
+RaftServer::~RaftServer()
+{
+    for (auto &pair : file_map)
+        MPI_File_close(&pair.second);
+}
+
 // Constructor definition
+//
 RaftServer::RaftServer(int nb_servers,
                        const std::filesystem::path &root_folder_path)
     : InternProcessus(nb_servers, root_folder_path)
@@ -53,13 +63,15 @@ int RaftServer::get_prev_log_term(int rank)
 
 void RaftServer::save_logs()
 {
-    std::string filename =
-        "server_folders/logs/" + std::to_string(uid) + ".logs";
+    auto logpath = LOG_ROOT_PATH / (std::to_string(uid) + ".logs");
+
     MPI_File file;
-    MPI_File_open(MPI_COMM_SELF, filename.c_str(),
+    MPI_File_open(MPI_COMM_SELF, logpath.c_str(),
                   MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &file);
+
     json j = entries;
-    std::string content = j.dump();
+
+    std::string content = j.dump(4);
 
     MPI_File_write(file, content.c_str(), content.size(), MPI_CHAR,
                    MPI_STATUS_IGNORE);
