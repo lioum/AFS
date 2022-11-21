@@ -131,5 +131,4 @@ protected:
     // Fixed heartbeat timeout fitting the raft election timeout
     constexpr static nanoseconds heartbeat = 30ms;
     nanoseconds heartbeat_timeout;
-    chrono_time last_heartbeat;
 };
